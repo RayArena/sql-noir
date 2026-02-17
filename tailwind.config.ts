@@ -57,33 +57,48 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        noir: {
+          amber: "hsl(var(--noir-amber))",
+          sepia: "hsl(var(--noir-sepia))",
+          paper: "hsl(var(--noir-paper))",
+          ink: "hsl(var(--noir-ink))",
+          red: "hsl(var(--noir-red))",
+          green: "hsl(var(--noir-green))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      fontFamily: {
+        typewriter: ["'Special Elite'", "cursive"],
+        mono: ["'Courier Prime'", "monospace"],
+      },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        "typewriter-blink": {
+          "0%, 50%": { opacity: "1" },
+          "51%, 100%": { opacity: "0" },
+        },
+        "stamp-slam": {
+          "0%": { transform: "rotate(-12deg) scale(3)", opacity: "0" },
+          "60%": { transform: "rotate(-12deg) scale(0.9)", opacity: "1" },
+          "100%": { transform: "rotate(-12deg) scale(1)", opacity: "0.85" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "typewriter-blink": "typewriter-blink 1s infinite",
+        "stamp-slam": "stamp-slam 0.4s ease-out forwards",
       },
     },
   },
