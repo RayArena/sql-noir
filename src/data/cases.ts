@@ -1,0 +1,332 @@
+export interface CaseObjective {
+  id: string;
+  title: string;
+  description: string;
+  hint: string;
+  /** The query result must include these values to pass */
+  validationFn: (rows: Record<string, unknown>[]) => boolean;
+  successMessage: string;
+  narrativeAfter: string;
+}
+
+export interface CaseSchema {
+  tables: {
+    name: string;
+    columns: { name: string; type: string; key?: "PK" | "FK" }[];
+    references?: { column: string; refTable: string; refColumn: string }[];
+  }[];
+}
+
+export interface GameCase {
+  id: number;
+  slug: string;
+  title: string;
+  subtitle: string;
+  difficulty: "Rookie" | "Detective" | "Senior Detective" | "Chief Inspector";
+  teaser: string;
+  briefing: string;
+  schema: CaseSchema;
+  objectives: CaseObjective[];
+}
+
+export const CASES: GameCase[] = [
+  {
+    id: 1,
+    slug: "the-missing-witness",
+    title: "The Missing Witness",
+    subtitle: "Basic SELECT & WHERE",
+    difficulty: "Rookie",
+    teaser: "A key witness has vanished before the trial. Dig through citizen records to find them.",
+    briefing:
+      "Detective, we have a problem. Our star witness for the Moretti trial — one Elena Vasquez — has disappeared. Last seen three days ago. We need you to query our citizen database and track her down before the trial begins tomorrow morning.",
+    schema: {
+      tables: [
+        {
+          name: "citizens",
+          columns: [
+            { name: "id", type: "INTEGER", key: "PK" },
+            { name: "first_name", type: "TEXT" },
+            { name: "last_name", type: "TEXT" },
+            { name: "age", type: "INTEGER" },
+            { name: "address", type: "TEXT" },
+            { name: "district", type: "TEXT" },
+            { name: "occupation", type: "TEXT" },
+            { name: "phone", type: "TEXT" },
+            { name: "status", type: "TEXT" },
+          ],
+        },
+        {
+          name: "sightings",
+          columns: [
+            { name: "id", type: "INTEGER", key: "PK" },
+            { name: "citizen_id", type: "INTEGER", key: "FK" },
+            { name: "location", type: "TEXT" },
+            { name: "seen_at", type: "TIMESTAMP" },
+            { name: "reported_by", type: "TEXT" },
+          ],
+          references: [{ column: "citizen_id", refTable: "citizens", refColumn: "id" }],
+        },
+      ],
+    },
+    objectives: [
+      {
+        id: "1-1",
+        title: "Find the Witness",
+        description: "Query the citizens table to find Elena Vasquez's record.",
+        hint: "Try: SELECT * FROM citizens WHERE first_name = 'Elena' AND last_name = 'Vasquez'",
+        validationFn: (rows) => rows.some((r) => String(r.first_name).toLowerCase() === "elena" && String(r.last_name).toLowerCase() === "vasquez"),
+        successMessage: "Good work, detective. We've got her file.",
+        narrativeAfter: "Elena Vasquez, age 34. She lives in the Riverside district. But where is she now?",
+      },
+      {
+        id: "1-2",
+        title: "Check Recent Sightings",
+        description: "Look at the sightings table to find where Elena was last seen.",
+        hint: "Try: SELECT * FROM sightings WHERE citizen_id = 7 ORDER BY seen_at DESC",
+        validationFn: (rows) => rows.length > 0 && rows.some((r) => String(r.location).toLowerCase().includes("warehouse")),
+        successMessage: "The old warehouse district... interesting.",
+        narrativeAfter: "Last sighting: the abandoned warehouse on 5th & Main. That's Moretti territory. This isn't a disappearance — it's a kidnapping.",
+      },
+      {
+        id: "1-3",
+        title: "Identify Other Witnesses Nearby",
+        description: "Find all citizens who live in the same district as Elena to identify potential helpers.",
+        hint: "Try: SELECT * FROM citizens WHERE district = 'Riverside' AND last_name != 'Vasquez'",
+        validationFn: (rows) => rows.length >= 2,
+        successMessage: "CASE CLOSED. We've got enough to move on the Moretti operation.",
+        narrativeAfter: "With the neighbor testimonies and sighting data, SWAT was dispatched to the warehouse. Elena was found safe. The Moretti trial proceeds tomorrow. Well done, detective.",
+      },
+    ],
+  },
+  {
+    id: 2,
+    slug: "the-double-identity",
+    title: "The Double Identity",
+    subtitle: "JOINs",
+    difficulty: "Detective",
+    teaser: "A con artist is living under multiple names. Cross-reference records to expose the fraud.",
+    briefing:
+      "We've got a slippery one. Someone is running an elaborate identity fraud, opening bank accounts under different names. We suspect it's the same person. Your job: cross-reference our citizens with bank records and ID registrations to expose the con artist.",
+    schema: {
+      tables: [
+        {
+          name: "persons",
+          columns: [
+            { name: "id", type: "INTEGER", key: "PK" },
+            { name: "full_name", type: "TEXT" },
+            { name: "ssn_hash", type: "TEXT" },
+            { name: "date_of_birth", type: "DATE" },
+            { name: "address", type: "TEXT" },
+          ],
+        },
+        {
+          name: "bank_accounts",
+          columns: [
+            { name: "id", type: "INTEGER", key: "PK" },
+            { name: "person_id", type: "INTEGER", key: "FK" },
+            { name: "bank_name", type: "TEXT" },
+            { name: "account_number", type: "TEXT" },
+            { name: "balance", type: "DECIMAL" },
+            { name: "opened_at", type: "DATE" },
+          ],
+          references: [{ column: "person_id", refTable: "persons", refColumn: "id" }],
+        },
+        {
+          name: "id_documents",
+          columns: [
+            { name: "id", type: "INTEGER", key: "PK" },
+            { name: "person_id", type: "INTEGER", key: "FK" },
+            { name: "doc_type", type: "TEXT" },
+            { name: "doc_number", type: "TEXT" },
+            { name: "issued_at", type: "DATE" },
+            { name: "is_valid", type: "BOOLEAN" },
+          ],
+          references: [{ column: "person_id", refTable: "persons", refColumn: "id" }],
+        },
+      ],
+    },
+    objectives: [
+      {
+        id: "2-1",
+        title: "List All Accounts",
+        description: "Join persons with their bank accounts to see who owns what.",
+        hint: "Try: SELECT p.full_name, b.bank_name, b.balance FROM persons p JOIN bank_accounts b ON p.id = b.person_id",
+        validationFn: (rows) => rows.length >= 5 && rows.some((r) => r.bank_name !== undefined),
+        successMessage: "Now we can see the full picture of account ownership.",
+        narrativeAfter: "Something doesn't look right. Multiple people with different names but suspiciously similar details...",
+      },
+      {
+        id: "2-2",
+        title: "Find Duplicate SSNs",
+        description: "Find persons who share the same SSN hash — they might be the same person.",
+        hint: "Try: SELECT p1.full_name, p2.full_name, p1.ssn_hash FROM persons p1 JOIN persons p2 ON p1.ssn_hash = p2.ssn_hash AND p1.id < p2.id",
+        validationFn: (rows) => rows.length >= 1 && rows.some((r) => r.ssn_hash !== undefined),
+        successMessage: "Gotcha! Same SSN, different names. Classic identity fraud.",
+        narrativeAfter: "The names 'Marcus Webb' and 'David Chen' share the same SSN hash. One of these identities is fake — or both are.",
+      },
+      {
+        id: "2-3",
+        title: "Check Invalid Documents",
+        description: "Use a LEFT JOIN to find persons with invalid or missing ID documents.",
+        hint: "Try: SELECT p.full_name, d.doc_type, d.is_valid FROM persons p LEFT JOIN id_documents d ON p.id = d.person_id WHERE d.is_valid = false OR d.id IS NULL",
+        validationFn: (rows) => rows.some((r) => r.is_valid === false || r.doc_type === null),
+        successMessage: "CASE CLOSED. The con artist has been identified and the accounts frozen.",
+        narrativeAfter: "With the forged documents exposed and the duplicate SSN confirmed, Marcus Webb — real name unknown — was arrested at the Eastside branch of First National. All fraudulent accounts have been seized.",
+      },
+    ],
+  },
+  {
+    id: 3,
+    slug: "the-crime-ring",
+    title: "The Crime Ring",
+    subtitle: "GROUP BY & Aggregation",
+    difficulty: "Senior Detective",
+    teaser: "A string of connected robberies. Analyze crime data patterns to find the gang's leader.",
+    briefing:
+      "Detective, the city is being terrorized by a highly organized robbery ring. 12 heists in 3 months, all with the same MO. We've got crime scene data, suspect records, and transaction logs. Crunch the numbers and find us the ringleader.",
+    schema: {
+      tables: [
+        {
+          name: "crimes",
+          columns: [
+            { name: "id", type: "INTEGER", key: "PK" },
+            { name: "crime_type", type: "TEXT" },
+            { name: "location", type: "TEXT" },
+            { name: "date_committed", type: "DATE" },
+            { name: "amount_stolen", type: "DECIMAL" },
+            { name: "district", type: "TEXT" },
+          ],
+        },
+        {
+          name: "suspects",
+          columns: [
+            { name: "id", type: "INTEGER", key: "PK" },
+            { name: "name", type: "TEXT" },
+            { name: "alias", type: "TEXT" },
+            { name: "rank", type: "TEXT" },
+            { name: "arrest_count", type: "INTEGER" },
+          ],
+        },
+        {
+          name: "crime_suspects",
+          columns: [
+            { name: "crime_id", type: "INTEGER", key: "FK" },
+            { name: "suspect_id", type: "INTEGER", key: "FK" },
+            { name: "role", type: "TEXT" },
+          ],
+          references: [
+            { column: "crime_id", refTable: "crimes", refColumn: "id" },
+            { column: "suspect_id", refTable: "suspects", refColumn: "id" },
+          ],
+        },
+      ],
+    },
+    objectives: [
+      {
+        id: "3-1",
+        title: "Crimes per District",
+        description: "Count how many crimes occurred in each district to find the hotspot.",
+        hint: "Try: SELECT district, COUNT(*) as crime_count FROM crimes GROUP BY district ORDER BY crime_count DESC",
+        validationFn: (rows) => rows.length >= 2 && rows.some((r) => r.crime_count !== undefined || r.count !== undefined),
+        successMessage: "The Downtown district is their hunting ground.",
+        narrativeAfter: "Downtown has 5 hits — more than double any other area. They're bold, hitting the busiest part of the city.",
+      },
+      {
+        id: "3-2",
+        title: "Total Haul Analysis",
+        description: "Calculate the total amount stolen by each suspect to find who's getting the biggest cut.",
+        hint: "Try: SELECT s.name, SUM(c.amount_stolen) as total FROM suspects s JOIN crime_suspects cs ON s.id = cs.suspect_id JOIN crimes c ON cs.crime_id = c.id GROUP BY s.name ORDER BY total DESC",
+        validationFn: (rows) => rows.length >= 2 && rows.some((r) => r.total !== undefined || r.sum !== undefined),
+        successMessage: "Follow the money... now we're getting somewhere.",
+        narrativeAfter: "One name keeps appearing at the top of every calculation. The money flows uphill in this organization.",
+      },
+      {
+        id: "3-3",
+        title: "Find the Ringleader",
+        description: "Find suspects involved in more than 3 crimes using HAVING. The one with the most connections is the leader.",
+        hint: "Try: SELECT s.name, s.alias, COUNT(cs.crime_id) as jobs FROM suspects s JOIN crime_suspects cs ON s.id = cs.suspect_id GROUP BY s.name, s.alias HAVING COUNT(cs.crime_id) > 3",
+        validationFn: (rows) => rows.length >= 1 && rows.some((r) => (r.jobs !== undefined && Number(r.jobs) > 3) || (r.count !== undefined && Number(r.count) > 3)),
+        successMessage: "CASE CLOSED. The ringleader is behind bars.",
+        narrativeAfter: "Viktor 'The Ghost' Petrov — involved in every single heist, always taking the biggest cut. SWAT raided his penthouse at dawn. The crime ring is broken.",
+      },
+    ],
+  },
+  {
+    id: 4,
+    slug: "the-inside-job",
+    title: "The Inside Job",
+    subtitle: "Subqueries & Complex Queries",
+    difficulty: "Chief Inspector",
+    teaser: "A corporate heist with an insider. Unravel the conspiracy using advanced SQL techniques.",
+    briefing:
+      "This one goes deep, detective. A $50 million art collection vanished from the Meridian Gallery during a gala. Security footage was wiped. The alarm was disabled from inside. We need you to untangle employee records, access logs, and financial trails to find the insider.",
+    schema: {
+      tables: [
+        {
+          name: "employees",
+          columns: [
+            { name: "id", type: "INTEGER", key: "PK" },
+            { name: "name", type: "TEXT" },
+            { name: "department", type: "TEXT" },
+            { name: "role", type: "TEXT" },
+            { name: "salary", type: "DECIMAL" },
+            { name: "hired_at", type: "DATE" },
+            { name: "clearance_level", type: "INTEGER" },
+          ],
+        },
+        {
+          name: "access_logs",
+          columns: [
+            { name: "id", type: "INTEGER", key: "PK" },
+            { name: "employee_id", type: "INTEGER", key: "FK" },
+            { name: "area", type: "TEXT" },
+            { name: "accessed_at", type: "TIMESTAMP" },
+            { name: "action", type: "TEXT" },
+          ],
+          references: [{ column: "employee_id", refTable: "employees", refColumn: "id" }],
+        },
+        {
+          name: "transactions",
+          columns: [
+            { name: "id", type: "INTEGER", key: "PK" },
+            { name: "employee_id", type: "INTEGER", key: "FK" },
+            { name: "amount", type: "DECIMAL" },
+            { name: "type", type: "TEXT" },
+            { name: "date", type: "DATE" },
+            { name: "description", type: "TEXT" },
+          ],
+          references: [{ column: "employee_id", refTable: "employees", refColumn: "id" }],
+        },
+      ],
+    },
+    objectives: [
+      {
+        id: "4-1",
+        title: "High Clearance Personnel",
+        description: "Find employees with above-average clearance levels — only they could disable the alarm.",
+        hint: "Try: SELECT * FROM employees WHERE clearance_level > (SELECT AVG(clearance_level) FROM employees)",
+        validationFn: (rows) => rows.length >= 1 && rows.some((r) => r.clearance_level !== undefined),
+        successMessage: "Narrowing the suspects... only a few had the access.",
+        narrativeAfter: "Only 4 employees had clearance high enough to reach the security panel. One of them is our insider.",
+      },
+      {
+        id: "4-2",
+        title: "Suspicious After-Hours Access",
+        description: "Find employees who accessed the vault area after hours on the night of the heist.",
+        hint: "Try: SELECT e.name, a.area, a.accessed_at FROM employees e JOIN access_logs a ON e.id = a.employee_id WHERE a.area = 'Vault' AND a.accessed_at > '2024-03-15 18:00:00'",
+        validationFn: (rows) => rows.length >= 1 && rows.some((r) => String(r.area).toLowerCase().includes("vault")),
+        successMessage: "Someone was in the vault when they shouldn't have been...",
+        narrativeAfter: "Two people accessed the vault after 6 PM. One was authorized security. The other... was not on the schedule.",
+      },
+      {
+        id: "4-3",
+        title: "Follow the Money",
+        description: "Find employees who received unusually large deposits (more than their salary) in the month after the heist.",
+        hint: "Try: SELECT e.name, t.amount, e.salary FROM employees e JOIN transactions t ON e.id = t.employee_id WHERE t.type = 'deposit' AND t.amount > e.salary AND t.date > '2024-03-15'",
+        validationFn: (rows) => rows.length >= 1 && rows.some((r) => Number(r.amount) > Number(r.salary)),
+        successMessage: "CASE CLOSED. The insider has been exposed.",
+        narrativeAfter: "Rachel Torres, Head of Security. High clearance, vault access after hours, and a $200,000 'consulting fee' deposited two weeks after the heist. She orchestrated everything — disabled the cameras, unlocked the vault, and walked out with $50 million in art. She's now in custody, and the art was recovered from a storage unit in Jersey. Exceptional work, Chief Inspector.",
+      },
+    ],
+  },
+];
