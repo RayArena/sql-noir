@@ -1,7 +1,7 @@
 import { useParams, Navigate, Link } from "react-router-dom";
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Terminal, Database, CheckCircle, Lock, Lightbulb, ChevronRight } from "lucide-react";
+import { ArrowLeft, CheckCircle, Lock, Lightbulb, ChevronRight } from "lucide-react";
 import { CASES, type CaseObjective } from "@/data/cases";
 import { useGameProgress } from "@/hooks/useGameProgress";
 import { Badge } from "@/components/ui/badge";
@@ -21,16 +21,22 @@ const CasePage = () => {
   const { getCurrentObjective, advanceObjective, isCaseUnlocked, isCaseCompleted } = useGameProgress();
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<"terminal" | "schema">("terminal");
   const [input, setInput] = useState("");
   const [lines, setLines] = useState<TerminalLine[]>([
-    { type: "system", content: "╔══════════════════════════════════════════════════╗" },
-    { type: "system", content: "║  SQL NOIR — DETECTIVE TERMINAL v2.1              ║" },
-    { type: "system", content: "╚══════════════════════════════════════════════════╝" },
+    { type: "system", content: "╔══════════════════════════════════════════════════════════════╗" },
+    { type: "system", content: "║  SQL NOIR — DETECTIVE TERMINAL v2.1                          ║" },
+    { type: "system", content: "╚══════════════════════════════════════════════════════════════╝" },
     { type: "output", content: "" },
-    { type: "output", content: "Welcome, Detective. Type SQL queries to investigate." },
-    { type: "output", content: 'Use  submit(name)  to submit your answer.' },
-    { type: "output", content: 'Type  help  for available commands.' },
+    { type: "output", content: "Welcome, Detective. This is your investigation terminal." },
+    { type: "output", content: "" },
+    { type: "output", content: "Commands:" },
+    { type: "output", content: "  SELECT ...          Run SQL queries against the evidence database" },
+    { type: "output", content: "  submit(name)        Submit your answer to the current objective" },
+    { type: "output", content: "  schema              View database tables and columns" },
+    { type: "output", content: "  clear               Clear terminal" },
+    { type: "output", content: "  help                Show available commands" },
+    { type: "output", content: "" },
+    { type: "system", content: "─".repeat(62) },
     { type: "output", content: "" },
   ]);
   const [showHint, setShowHint] = useState<string | null>(null);
@@ -77,12 +83,38 @@ const CasePage = () => {
       addLines([
         { type: "output", content: "" },
         { type: "system", content: "Available commands:" },
-        { type: "output", content: "  SELECT ...        Run a SQL query" },
-        { type: "output", content: "  submit(name)      Submit your answer" },
-        { type: "output", content: "  clear             Clear terminal" },
-        { type: "output", content: "  help              Show this help" },
+        { type: "output", content: "  SELECT ...          Run a SQL query against the evidence database" },
+        { type: "output", content: "  submit(name)        Submit your answer to the current objective" },
+        { type: "output", content: "  schema              View database tables and columns" },
+        { type: "output", content: "  clear               Clear terminal" },
+        { type: "output", content: "  help                Show this help" },
         { type: "output", content: "" },
       ]);
+      return;
+    }
+
+    if (trimmed.toLowerCase() === "schema") {
+      const schemaLines: TerminalLine[] = [
+        { type: "output", content: "" },
+        { type: "system", content: "╔══ EVIDENCE DATABASE SCHEMA ══╗" },
+        { type: "output", content: "" },
+      ];
+      gameCase.schema.tables.forEach((table) => {
+        schemaLines.push({ type: "system", content: `┌─ ${table.name} ${"─".repeat(Math.max(0, 40 - table.name.length))}┐` });
+        table.columns.forEach((col) => {
+          const keyTag = col.key ? ` [${col.key}]` : "";
+          schemaLines.push({ type: "output", content: `│  ${col.name.padEnd(20)} ${col.type.padEnd(12)}${keyTag}` });
+        });
+        if (table.references && table.references.length > 0) {
+          schemaLines.push({ type: "output", content: "│" });
+          table.references.forEach((ref) => {
+            schemaLines.push({ type: "output", content: `│  FK: ${ref.column} → ${ref.refTable}.${ref.refColumn}` });
+          });
+        }
+        schemaLines.push({ type: "system", content: `└${"─".repeat(44)}┘` });
+        schemaLines.push({ type: "output", content: "" });
+      });
+      addLines(schemaLines);
       return;
     }
 
@@ -250,97 +282,42 @@ const CasePage = () => {
           </ScrollArea>
         </div>
 
-        {/* RIGHT: Workspace */}
-        <div className="flex-1 flex flex-col">
-          <div className="flex border-b border-border">
-            <button onClick={() => setActiveTab("terminal")}
-              className={`flex items-center gap-2 px-5 py-3 font-typewriter text-xs tracking-widest uppercase transition-colors ${
-                activeTab === "terminal" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
-              }`}>
-              <Terminal className="w-3.5 h-3.5" /> SQL Terminal
-            </button>
-            <button onClick={() => setActiveTab("schema")}
-              className={`flex items-center gap-2 px-5 py-3 font-typewriter text-xs tracking-widest uppercase transition-colors ${
-                activeTab === "schema" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
-              }`}>
-              <Database className="w-3.5 h-3.5" /> Schema
-            </button>
+        {/* RIGHT: Full CLI Terminal */}
+        <div
+          className="flex-1 flex flex-col bg-[hsl(220,20%,8%)] cursor-text"
+          onClick={() => inputRef.current?.focus()}
+        >
+          <div className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed">
+            {lines.map((line, i) => (
+              <div key={i} className={`${lineColor(line.type)} whitespace-pre`}>
+                {line.content || "\u00A0"}
+              </div>
+            ))}
+            {isRunning && (
+              <div className="text-muted-foreground animate-pulse">Executing query...</div>
+            )}
+            <div ref={terminalEndRef} />
           </div>
 
-          {activeTab === "terminal" ? (
-            <div
-              className="flex-1 flex flex-col bg-[hsl(220,20%,8%)] cursor-text"
-              onClick={() => inputRef.current?.focus()}
-            >
-              {/* Terminal output */}
-              <div className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed">
-                {lines.map((line, i) => (
-                  <div key={i} className={`${lineColor(line.type)} whitespace-pre`}>
-                    {line.content || "\u00A0"}
-                  </div>
-                ))}
-                {isRunning && (
-                  <div className="text-muted-foreground animate-pulse">Executing query...</div>
-                )}
-                <div ref={terminalEndRef} />
-              </div>
-
-              {/* Input line */}
-              <div className="border-t border-border/30 px-4 py-3 flex items-center gap-2">
-                <span className="font-mono text-xs text-noir-green terminal-glow select-none">sql&gt;</span>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !isRunning && !completed) {
-                      handleCommand(input);
-                      setInput("");
-                    }
-                  }}
-                  disabled={completed}
-                  placeholder={completed ? "Case closed." : "Type a query or submit(name)..."}
-                  className="flex-1 bg-transparent border-none outline-none font-mono text-xs text-foreground placeholder:text-muted-foreground/40 caret-noir-green"
-                  autoFocus
-                />
-              </div>
-            </div>
-          ) : (
-            <ScrollArea className="flex-1">
-              <div className="p-6 space-y-6">
-                <h3 className="font-typewriter text-xs text-muted-foreground tracking-widest uppercase">Evidence Database Schema</h3>
-                <div className="grid gap-6">
-                  {gameCase.schema.tables.map((table) => (
-                    <div key={table.name} className="case-file rounded p-4">
-                      <h4 className="font-typewriter text-sm text-noir-ink mb-3 border-b border-noir-ink/20 pb-2">📁 {table.name}</h4>
-                      <div className="space-y-1">
-                        {table.columns.map((col) => (
-                          <div key={col.name} className="flex items-center gap-3 font-mono text-xs">
-                            <span className="text-noir-ink/80 w-36">{col.name}</span>
-                            <span className="text-noir-ink/50 text-[10px]">{col.type}</span>
-                            {col.key && (
-                              <Badge className="text-[8px] bg-noir-amber/20 text-noir-amber border-noir-amber/30 px-1.5 py-0">{col.key}</Badge>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                      {table.references && table.references.length > 0 && (
-                        <div className="mt-3 pt-2 border-t border-noir-ink/10">
-                          <p className="font-mono-case text-[10px] text-noir-ink/40 mb-1">References:</p>
-                          {table.references.map((ref, i) => (
-                            <p key={i} className="font-mono text-[10px] text-noir-ink/60">
-                              {ref.column} → {ref.refTable}.{ref.refColumn}
-                            </p>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </ScrollArea>
-          )}
+          <div className="border-t border-border/30 px-4 py-3 flex items-center gap-2">
+            <span className="font-mono text-xs text-noir-green terminal-glow select-none">sql&gt;</span>
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !isRunning && !completed) {
+                  handleCommand(input);
+                  setInput("");
+                }
+              }}
+              disabled={completed}
+              placeholder={completed ? "Case closed." : "Type a query or submit(name)..."}
+              className="flex-1 bg-transparent border-none outline-none font-mono text-xs text-foreground placeholder:text-muted-foreground/40 caret-noir-green"
+              autoFocus
+            />
+          </div>
         </div>
       </div>
     </div>
