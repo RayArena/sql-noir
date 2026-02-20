@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useCallback } from "react";
 
 interface GameProgress {
@@ -9,6 +11,7 @@ const STORAGE_KEY = "sql-noir-progress";
 
 function loadProgress(): GameProgress {
   try {
+    if (typeof window === "undefined") return { completedCases: [], currentObjectives: {} };
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch {}
