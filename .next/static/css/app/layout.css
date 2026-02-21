@@ -1098,19 +1098,6 @@ body{
 .transform{
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
-@keyframes typewriter-blink{
-
-  0%, 50%{
-    opacity: 1;
-  }
-
-  51%, 100%{
-    opacity: 0;
-  }
-}
-.animate-\[typewriter-blink_1s_infinite\]{
-  animation: typewriter-blink 1s infinite;
-}
 @keyframes pulse{
 
   50%{
@@ -1276,14 +1263,8 @@ body{
 .whitespace-pre{
   white-space: pre;
 }
-.whitespace-pre-wrap{
-  white-space: pre-wrap;
-}
 .break-words{
   overflow-wrap: break-word;
-}
-.break-all{
-  word-break: break-all;
 }
 .rounded{
   border-radius: 0.25rem;
@@ -1340,6 +1321,9 @@ body{
 }
 .border-dashed{
   border-style: dashed;
+}
+.border-none{
+  border-style: none;
 }
 .border-\[--color-border\]{
   border-color: var(--color-border);
@@ -1860,9 +1844,6 @@ body{
 .underline-offset-4{
   text-underline-offset: 4px;
 }
-.caret-transparent{
-  caret-color: transparent;
-}
 .opacity-0{
   opacity: 0;
 }
@@ -2116,6 +2097,22 @@ body{
       hsl(220 20% 8%) 100%
     );
   }
+
+.selection\:bg-primary\/30 *::-moz-selection{
+  background-color: hsl(var(--primary) / 0.3);
+}
+
+.selection\:bg-primary\/30 *::selection{
+  background-color: hsl(var(--primary) / 0.3);
+}
+
+.selection\:bg-primary\/30::-moz-selection{
+  background-color: hsl(var(--primary) / 0.3);
+}
+
+.selection\:bg-primary\/30::selection{
+  background-color: hsl(var(--primary) / 0.3);
+}
 
 .file\:border-0::file-selector-button{
   border-width: 0px;

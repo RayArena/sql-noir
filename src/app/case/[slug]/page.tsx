@@ -33,7 +33,7 @@ export default function CasePage() {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [lines, setLines] = useState<TerminalLine[]>([
     { type: "system", content: "╔══════════════════════════════════════════════════════════════╗" },
-    { type: "system", content: "║  SQL NOIR — DETECTIVE TERMINAL v2.1                          ║" },
+    { type: "system", content: "║  SQL NOIR — DETECTIVE TERMINAL                          ║" },
     { type: "system", content: "╚══════════════════════════════════════════════════════════════╝" },
     { type: "output", content: "" },
     { type: "output", content: "Welcome, Detective. This is your investigation terminal." },
@@ -370,63 +370,55 @@ export default function CasePage() {
               )}
 
               {/* Inline input — the actual CLI prompt */}
-              <div className="flex items-start gap-0 mt-0.5 relative">
+              <div className="flex items-center gap-0 mt-0.5">
                 <span className="text-noir-green terminal-glow font-mono text-xs select-none whitespace-pre shrink-0">
-                  {completed ? "sql> " : "sql> "}
+                  sql&gt;&nbsp;
                 </span>
-                <div className="relative flex-1 min-w-0">
-                  {/* Visible typed text + blinking cursor */}
-                  <span className="font-mono text-xs text-foreground whitespace-pre-wrap break-all pointer-events-none">
-                    {input}
-                  </span>
-                  {!completed && (
-                    <span className="font-mono text-xs text-noir-green animate-[typewriter-blink_1s_infinite] pointer-events-none">█</span>
-                  )}
-                  {/* Invisible but real input that captures keystrokes */}
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={input}
-                    onChange={(e) => {
-                      setInput(e.target.value);
-                      setHistoryIndex(-1);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !isRunning && !completed) {
-                        if (input.trim()) {
-                          setCommandHistory((prev) => [input.trim(), ...prev.slice(0, 49)]);
-                          setHistoryIndex(-1);
-                        }
-                        handleCommand(input);
-                        setInput("");
-                      } else if (e.key === "ArrowUp") {
-                        e.preventDefault();
-                        const nextIdx = historyIndex + 1;
-                        if (nextIdx < commandHistory.length) {
-                          setHistoryIndex(nextIdx);
-                          setInput(commandHistory[nextIdx]);
-                        }
-                      } else if (e.key === "ArrowDown") {
-                        e.preventDefault();
-                        const nextIdx = historyIndex - 1;
-                        if (nextIdx < 0) {
-                          setHistoryIndex(-1);
-                          setInput("");
-                        } else {
-                          setHistoryIndex(nextIdx);
-                          setInput(commandHistory[nextIdx]);
-                        }
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    setHistoryIndex(-1);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !isRunning && !completed) {
+                      if (input.trim()) {
+                        setCommandHistory((prev) => [input.trim(), ...prev.slice(0, 49)]);
+                        setHistoryIndex(-1);
                       }
-                    }}
-                    disabled={completed}
-                    autoFocus
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-text caret-transparent"
-                    spellCheck={false}
-                    autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                  />
-                </div>
+                      handleCommand(input);
+                      setInput("");
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      const nextIdx = historyIndex + 1;
+                      if (nextIdx < commandHistory.length) {
+                        setHistoryIndex(nextIdx);
+                        setInput(commandHistory[nextIdx]);
+                      }
+                    } else if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      const nextIdx = historyIndex - 1;
+                      if (nextIdx < 0) {
+                        setHistoryIndex(-1);
+                        setInput("");
+                      } else {
+                        setHistoryIndex(nextIdx);
+                        setInput(commandHistory[nextIdx]);
+                      }
+                    }
+                  }}
+                  disabled={completed}
+                  autoFocus
+                  spellCheck={false}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  className="flex-1 min-w-0 bg-transparent border-none outline-none font-mono text-xs text-foreground selection:bg-primary/30"
+                  style={{ caretColor: "hsl(140 40% 45%)" }}
+                  placeholder={completed ? "" : ""}
+                />
               </div>
 
               {completed && (
