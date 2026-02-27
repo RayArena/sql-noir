@@ -35,20 +35,29 @@ export async function POST(req: Request) {
 
   const { type, data } = evt;
 
+  // ── user.created / user.updated ────────────────────────────────────────────
   if (type === "user.created" || type === "user.updated") {
     const {
       id: clerk_id,
       email_addresses,
+      phone_numbers,
       first_name,
       last_name,
       username,
       image_url,
+      created_at,
     } = data;
 
     const primaryEmail =
       email_addresses?.find((e) => e.id === data.primary_email_address_id)
         ?.email_address ??
       email_addresses?.[0]?.email_address ??
+      null;
+
+    const primaryPhone =
+      phone_numbers?.find((p) => p.id === data.primary_phone_number_id)
+        ?.phone_number ??
+      phone_numbers?.[0]?.phone_number ??
       null;
 
     const full_name =
@@ -61,6 +70,12 @@ export async function POST(req: Request) {
         full_name,
         username: username ?? null,
         avatar_url: image_url ?? null,
+        phone_number: primaryPhone,
+        // Only set created_at on insert; upsert won't overwrite existing value
+        // because we only include it when type === "user.created"
+        ...(type === "user.created" && created_at
+          ? { created_at: new Date(created_at).toISOString() }
+          : {}),
         updated_at: new Date().toISOString(),
       },
       { onConflict: "clerk_id" }
@@ -74,6 +89,24 @@ export async function POST(req: Request) {
     console.log(`[webhook] ${type} synced: ${clerk_id}`);
   }
 
+  // ── session.created → update last_sign_in_at ───────────────────────────────
+  if (type === "session.created") {
+    const { user_id: clerk_id } = data as { user_id: string };
+
+    const { error } = await supabaseAdmin
+      .from("users")
+      .update({ last_sign_in_at: new Date().toISOString() })
+      .eq("clerk_id", clerk_id);
+
+    if (error) {
+      console.error("[webhook] session.created update error:", error);
+      return new Response("Supabase error", { status: 500 });
+    }
+
+    console.log(`[webhook] session.created synced: ${clerk_id}`);
+  }
+
+  // ── user.deleted ───────────────────────────────────────────────────────────
   if (type === "user.deleted") {
     const { id: clerk_id } = data;
     if (clerk_id) {

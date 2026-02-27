@@ -15,6 +15,8 @@ export interface DbUser {
   full_name: string | null;
   username: string | null;
   avatar_url: string | null;
+  phone_number: string | null;
+  last_sign_in_at: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -29,6 +29,12 @@ export async function getOrCreateSupabaseUser(): Promise<{ id: string } | null> 
   const full_name =
     [user.firstName, user.lastName].filter(Boolean).join(" ").trim() || null;
 
+  const primaryPhone =
+    user.phoneNumbers?.find((p) => p.id === user.primaryPhoneNumberId)
+      ?.phoneNumber ??
+    user.phoneNumbers?.[0]?.phoneNumber ??
+    null;
+
   const { data: created } = await supabaseAdmin
     .from("users")
     .insert({
@@ -37,6 +43,8 @@ export async function getOrCreateSupabaseUser(): Promise<{ id: string } | null> 
       full_name,
       username: user.username ?? null,
       avatar_url: user.imageUrl ?? null,
+      phone_number: primaryPhone,
+      last_sign_in_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
     .select("id")
