@@ -8,18 +8,34 @@ import { supabaseAdmin } from "@/lib/supabase";
  */
 export async function getOrCreateSupabaseUser(): Promise<{ id: string } | null> {
   const user = await currentUser();
-  if (!user) return null;
+  if (!user) {
+    console.warn("[getOrCreateUser] no Clerk session — returning null");
+    return null;
+  }
+
+  console.log("[getOrCreateUser] clerk_id:", user.id);
 
   // Try to find existing row
-  const { data: existing } = await supabaseAdmin
+  const { data: existing, error: selectError } = await supabaseAdmin
     .from("users")
     .select("id")
     .eq("clerk_id", user.id)
     .single();
 
-  if (existing) return existing as { id: string };
+  if (selectError && selectError.code !== "PGRST116") {
+    // PGRST116 = "exactly one row expected but 0 found" — normal for new users
+    console.error("[getOrCreateUser] select error:", selectError);
+    return null;
+  }
+
+  if (existing) {
+    console.log("[getOrCreateUser] found existing user:", existing.id);
+    return existing as { id: string };
+  }
 
   // Auto-create on first access (replaces webhook for local dev)
+  console.log("[getOrCreateUser] creating new user for clerk_id:", user.id);
+
   const primaryEmail =
     user.emailAddresses?.find((e) => e.id === user.primaryEmailAddressId)
       ?.emailAddress ??
@@ -35,7 +51,7 @@ export async function getOrCreateSupabaseUser(): Promise<{ id: string } | null> 
     user.phoneNumbers?.[0]?.phoneNumber ??
     null;
 
-  const { data: created } = await supabaseAdmin
+  const { data: created, error: insertError } = await supabaseAdmin
     .from("users")
     .insert({
       clerk_id: user.id,
@@ -50,5 +66,11 @@ export async function getOrCreateSupabaseUser(): Promise<{ id: string } | null> 
     .select("id")
     .single();
 
+  if (insertError) {
+    console.error("[getOrCreateUser] insert error:", insertError);
+    return null;
+  }
+
+  console.log("[getOrCreateUser] created user:", created?.id);
   return created as { id: string } | null;
 }
