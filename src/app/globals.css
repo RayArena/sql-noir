@@ -133,4 +133,42 @@
       hsl(220 20% 8%) 100%
     );
   }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ── Hide Clerk "Secured by Clerk / Development mode" badge ── */
+.cl-footer__powered,
+.cl-badge,
+.cl-footerPages,
+.cl-poweredBy,
+[data-localization-key="footerPageLink__privacy"],
+[data-localization-key="footerPageLink__terms"],
+[class*="cl-internal"] a[href*="clerk"],
+[class*="cl-internal"] svg,
+[data-clerk-badge] {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Target the footer branding row specifically */
+.cl-footer > :last-child {
+  display: none !important;
+}
+
+/* Remove dark card background from Clerk footer action container */
+.cl-footer,
+.cl-footerAction {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
 }

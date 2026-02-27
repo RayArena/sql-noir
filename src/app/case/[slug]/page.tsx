@@ -4,8 +4,8 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, CheckCircle, Lock, Lightbulb, ChevronRight } from "lucide-react";
-import { CASES, type CaseObjective } from "@/data/cases";
+import { ArrowLeft, CheckCircle, Lock, Lightbulb, ChevronRight, TerminalSquare, Database, Key, Link2 } from "lucide-react";
+import { CASES, type CaseObjective, type CaseSchema } from "@/data/cases";
 import { useGameProgress } from "@/hooks/useGameProgress";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -23,14 +23,17 @@ export default function CasePage() {
   const slug = params?.slug as string;
   const router = useRouter();
   const gameCase = CASES.find((c) => c.slug === slug);
-  const { getCurrentObjective, advanceObjective, isCaseUnlocked, isCaseCompleted } = useGameProgress();
+  const { getCurrentObjective, advanceObjective, isCaseUnlocked, isCaseCompleted, isLoading: progressLoading } = useGameProgress();
   const { toast } = useToast();
 
   const [mounted, setMounted] = useState(false);
+  const [rightView, setRightView] = useState<"terminal" | "schema">("terminal");
   const [input, setInput] = useState("");
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
   const [lines, setLines] = useState<TerminalLine[]>([
     { type: "system", content: "╔══════════════════════════════════════════════════════════════╗" },
-    { type: "system", content: "║  SQL NOIR — DETECTIVE TERMINAL v2.1                          ║" },
+    { type: "system", content: "║  SQL NOIR — DETECTIVE TERMINAL                          ║" },
     { type: "system", content: "╚══════════════════════════════════════════════════════════════╝" },
     { type: "output", content: "" },
     { type: "output", content: "Welcome, Detective. This is your investigation terminal." },
@@ -49,6 +52,7 @@ export default function CasePage() {
   const [narratives, setNarratives] = useState<string[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const terminalEndRef = useRef<HTMLDivElement>(null);
+  const terminalContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -56,11 +60,11 @@ export default function CasePage() {
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || progressLoading) return;
     if (!gameCase || !isCaseUnlocked(gameCase.id)) {
       router.replace("/cases");
     }
-  }, [mounted, gameCase, isCaseUnlocked, router]);
+  }, [mounted, progressLoading, gameCase, isCaseUnlocked, router]);
 
   const currentObjIdx = gameCase ? getCurrentObjective(gameCase.id) : 0;
   const completed = gameCase ? isCaseCompleted(gameCase.id) : false;
@@ -69,6 +73,16 @@ export default function CasePage() {
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [lines]);
+
+  // Re-focus input and scroll to bottom when switching back to terminal
+  useEffect(() => {
+    if (rightView === "terminal") {
+      setTimeout(() => {
+        inputRef.current?.focus();
+        terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 50);
+    }
+  }, [rightView]);
 
   const addLines = useCallback((newLines: TerminalLine[]) => {
     setLines((prev) => [...prev, ...newLines]);
@@ -212,7 +226,7 @@ export default function CasePage() {
   return (
     <div className="h-screen flex flex-col noir-gradient">
       {/* Top bar */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border mt-[57px]">
         <Link href="/cases" className="text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="w-4 h-4" />
         </Link>
@@ -299,42 +313,232 @@ export default function CasePage() {
           </ScrollArea>
         </div>
 
-        {/* RIGHT: Full CLI Terminal */}
-        <div
-          className="flex-1 flex flex-col bg-[hsl(220,20%,8%)] cursor-text"
-          onClick={() => inputRef.current?.focus()}
-        >
-          <div className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed">
-            {lines.map((line, i) => (
-              <div key={i} className={`${lineColor(line.type)} whitespace-pre`}>
-                {line.content || "\u00A0"}
-              </div>
-            ))}
-            {isRunning && (
-              <div className="text-muted-foreground animate-pulse">Executing query...</div>
-            )}
-            <div ref={terminalEndRef} />
+        {/* RIGHT: Terminal / Schema panel */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+          {/* Tab bar */}
+          <div className="flex items-center gap-1 px-3 py-2 border-b border-border bg-[hsl(220,20%,6%)] shrink-0">
+            <button
+              onClick={() => setRightView("terminal")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[11px] font-typewriter tracking-wider transition-all ${
+                rightView === "terminal"
+                  ? "bg-primary/15 text-primary border border-primary/30"
+                  : "text-muted-foreground hover:text-foreground border border-transparent hover:border-border"
+              }`}
+            >
+              <TerminalSquare className="w-3 h-3" />
+              Terminal
+            </button>
+            <button
+              onClick={() => setRightView("schema")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[11px] font-typewriter tracking-wider transition-all ${
+                rightView === "schema"
+                  ? "bg-primary/15 text-primary border border-primary/30"
+                  : "text-muted-foreground hover:text-foreground border border-transparent hover:border-border"
+              }`}
+            >
+              <Database className="w-3 h-3" />
+              Schema
+            </button>
+            <div className="ml-auto flex items-center gap-2 pr-1">
+              {isRunning && (
+                <span className="text-[10px] font-mono text-primary/60 animate-pulse tracking-widest">executing…</span>
+              )}
+              <div className={`w-2 h-2 rounded-full transition-colors ${completed ? "bg-noir-green shadow-[0_0_6px_hsl(var(--noir-green)/0.6)]" : "bg-primary/40"}`} title={completed ? "Case closed" : "Active"} />
+            </div>
           </div>
 
-          <div className="border-t border-border/30 px-4 py-3 flex items-center gap-2">
-            <span className="font-mono text-xs text-noir-green terminal-glow select-none">sql&gt;</span>
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !isRunning && !completed) {
-                  handleCommand(input);
-                  setInput("");
-                }
-              }}
-              disabled={completed}
-              placeholder={completed ? "Case closed." : "Type a query or submit(name)..."}
-              className="flex-1 bg-transparent border-none outline-none font-mono text-xs text-foreground placeholder:text-muted-foreground/40 caret-noir-green"
-              autoFocus
-            />
+          {/* Terminal view — never unmounted so state persists */}
+          <div
+            className={`flex-1 flex flex-col bg-[hsl(220,20%,6%)] overflow-hidden ${rightView !== "terminal" ? "hidden" : ""}`}
+            onClick={() => inputRef.current?.focus()}
+          >
+            <div
+              ref={terminalContainerRef}
+              className="flex-1 overflow-y-auto px-5 py-4 font-mono text-xs leading-[1.7] cursor-text"
+            >
+              {lines.map((line, i) => (
+                <div key={i} className={`${lineColor(line.type)} whitespace-pre`}>
+                  {line.content || "\u00A0"}
+                </div>
+              ))}
+
+              {isRunning && (
+                <div className="flex items-center gap-1 text-primary/50">
+                  <span className="animate-pulse">▌</span>
+                </div>
+              )}
+
+              {/* Inline input — the actual CLI prompt */}
+              <div className="flex items-center gap-0 mt-0.5">
+                <span className="text-noir-green terminal-glow font-mono text-xs select-none whitespace-pre shrink-0">
+                  sql&gt;&nbsp;
+                </span>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    setHistoryIndex(-1);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !isRunning && !completed) {
+                      if (input.trim()) {
+                        setCommandHistory((prev) => [input.trim(), ...prev.slice(0, 49)]);
+                        setHistoryIndex(-1);
+                      }
+                      handleCommand(input);
+                      setInput("");
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      const nextIdx = historyIndex + 1;
+                      if (nextIdx < commandHistory.length) {
+                        setHistoryIndex(nextIdx);
+                        setInput(commandHistory[nextIdx]);
+                      }
+                    } else if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      const nextIdx = historyIndex - 1;
+                      if (nextIdx < 0) {
+                        setHistoryIndex(-1);
+                        setInput("");
+                      } else {
+                        setHistoryIndex(nextIdx);
+                        setInput(commandHistory[nextIdx]);
+                      }
+                    }
+                  }}
+                  disabled={completed}
+                  autoFocus
+                  spellCheck={false}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  className="flex-1 min-w-0 bg-transparent border-none outline-none font-mono text-xs text-foreground selection:bg-primary/30"
+                  style={{ caretColor: "hsl(140 40% 45%)" }}
+                  placeholder={completed ? "" : ""}
+                />
+              </div>
+
+              {completed && (
+                <div className="mt-1 font-mono text-xs text-muted-foreground/40 italic">
+                  — Case closed. No further queries accepted. —
+                </div>
+              )}
+
+              <div ref={terminalEndRef} />
+            </div>
           </div>
+
+          {/* Schema view */}
+          {rightView === "schema" && (
+            <SchemaView schema={gameCase.schema} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Schema diagram component
+function SchemaView({ schema }: { schema: CaseSchema }) {
+  return (
+    <div className="flex-1 overflow-y-auto bg-[hsl(220,20%,6%)] p-6">
+      <div className="mb-5">
+        <p className="font-typewriter text-[11px] text-muted-foreground tracking-[0.25em] uppercase">
+          Evidence Database — Schema Diagram
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-5">
+        {schema.tables.map((table) => (
+          <div
+            key={table.name}
+            className="min-w-[220px] flex-1 max-w-[320px] rounded border border-primary/25 overflow-hidden bg-[hsl(220,20%,9%)] shadow-[0_0_18px_hsl(0_0%_0%/0.4)]"
+          >
+            {/* Table header */}
+            <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 border-b border-primary/25">
+              <Database className="w-3 h-3 text-primary/70 shrink-0" />
+              <span className="font-typewriter text-xs text-primary tracking-wider uppercase">
+                {table.name}
+              </span>
+            </div>
+
+            {/* Columns */}
+            <div className="divide-y divide-border/40">
+              {table.columns.map((col) => (
+                <div
+                  key={col.name}
+                  className={`flex items-center gap-2 px-3 py-1.5 ${
+                    col.key === "PK"
+                      ? "bg-primary/5"
+                      : col.key === "FK"
+                      ? "bg-noir-green/5"
+                      : ""
+                  }`}
+                >
+                  {col.key === "PK" && (
+                    <Key className="w-2.5 h-2.5 text-primary/80 shrink-0" />
+                  )}
+                  {col.key === "FK" && (
+                    <Link2 className="w-2.5 h-2.5 text-noir-green/70 shrink-0" />
+                  )}
+                  {!col.key && (
+                    <span className="w-2.5 h-2.5 shrink-0" />
+                  )}
+                  <span className={`font-mono text-[11px] flex-1 ${
+                    col.key === "PK" ? "text-primary" : col.key === "FK" ? "text-noir-green/80" : "text-foreground/75"
+                  }`}>
+                    {col.name}
+                  </span>
+                  <span className="font-mono text-[10px] text-muted-foreground/50 shrink-0">
+                    {col.type}
+                  </span>
+                  {col.key && (
+                    <span className={`text-[9px] font-typewriter tracking-wider px-1 rounded border shrink-0 ${
+                      col.key === "PK"
+                        ? "text-primary/70 border-primary/30 bg-primary/10"
+                        : "text-noir-green/70 border-noir-green/30 bg-noir-green/10"
+                    }`}>
+                      {col.key}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Foreign key references */}
+            {table.references && table.references.length > 0 && (
+              <div className="border-t border-dashed border-border/40 px-3 py-2 space-y-1">
+                <p className="font-typewriter text-[9px] text-muted-foreground/50 tracking-widest uppercase mb-1">
+                  Relations
+                </p>
+                {table.references.map((ref, i) => (
+                  <div key={i} className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground/60">
+                    <Link2 className="w-2.5 h-2.5 text-noir-green/50 shrink-0" />
+                    <span className="text-noir-green/70">{ref.column}</span>
+                    <span className="text-muted-foreground/40">→</span>
+                    <span className="text-primary/60">{ref.refTable}</span>
+                    <span className="text-muted-foreground/40">.</span>
+                    <span className="text-primary/80">{ref.refColumn}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Legend */}
+      <div className="mt-6 flex items-center gap-5 pt-4 border-t border-border/30">
+        <div className="flex items-center gap-1.5">
+          <Key className="w-3 h-3 text-primary/70" />
+          <span className="font-typewriter text-[10px] text-muted-foreground/60 tracking-wider">Primary Key</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Link2 className="w-3 h-3 text-noir-green/60" />
+          <span className="font-typewriter text-[10px] text-muted-foreground/60 tracking-wider">Foreign Key</span>
         </div>
       </div>
     </div>

@@ -1,0 +1,13 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/api/progress/advance/route": "/api/progress/advance",
+  "/api/progress/route": "/api/progress",
+  "/api/progress/reset/route": "/api/progress/reset",
+  "/api/webhooks/clerk/route": "/api/webhooks/clerk",
+  "/cases/page": "/cases",
+  "/case/[slug]/page": "/case/[slug]",
+  "/sign-up/[[...sign-up]]/page": "/sign-up/[[...sign-up]]",
+  "/profile/page": "/profile",
+  "/sign-in/[[...sign-in]]/page": "/sign-in/[[...sign-in]]",
+  "/page": "/"
+}

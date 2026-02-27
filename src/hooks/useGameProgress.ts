@@ -1,41 +1,50 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 interface GameProgress {
   completedCases: number[];
   currentObjectives: Record<number, number>; // caseId -> objective index
 }
 
-const STORAGE_KEY = "sql-noir-progress";
-
-function loadProgress(): GameProgress {
-  try {
-    if (typeof window === "undefined") return { completedCases: [], currentObjectives: {} };
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return { completedCases: [], currentObjectives: {} };
-}
-
-function saveProgress(p: GameProgress) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
-}
+const EMPTY: GameProgress = { completedCases: [], currentObjectives: {} };
 
 export function useGameProgress() {
-  const [progress, setProgress] = useState<GameProgress>(loadProgress);
+  const [progress, setProgress] = useState<GameProgress>(EMPTY);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load progress from Supabase via API route on mount
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/progress")
+      .then((r) => (r.ok ? r.json() : EMPTY))
+      .then((data: GameProgress) => {
+        if (!cancelled) {
+          setProgress(data);
+          setIsLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const isCaseUnlocked = useCallback(
     (caseId: number) => {
       if (caseId === 1) return true;
+      if (isLoading) return false;
       return progress.completedCases.includes(caseId - 1);
     },
-    [progress]
+    [progress, isLoading]
   );
 
   const isCaseCompleted = useCallback(
-    (caseId: number) => progress.completedCases.includes(caseId),
-    [progress]
+    (caseId: number) => {
+      if (isLoading) return false;
+      return progress.completedCases.includes(caseId);
+    },
+    [progress, isLoading]
   );
 
   const getCurrentObjective = useCallback(
@@ -43,30 +52,42 @@ export function useGameProgress() {
     [progress]
   );
 
-  const advanceObjective = useCallback((caseId: number, totalObjectives: number) => {
-    setProgress((prev) => {
-      const currentIdx = prev.currentObjectives[caseId] ?? 0;
-      const nextIdx = currentIdx + 1;
-      const completed = nextIdx >= totalObjectives;
-      const newProgress: GameProgress = {
-        completedCases: completed
-          ? [...new Set([...prev.completedCases, caseId])]
-          : prev.completedCases,
-        currentObjectives: {
-          ...prev.currentObjectives,
-          [caseId]: nextIdx,
-        },
-      };
-      saveProgress(newProgress);
-      return newProgress;
-    });
+  const advanceObjective = useCallback(
+    async (caseId: number, totalObjectives: number) => {
+      // Optimistic update first
+      setProgress((prev) => {
+        const currentIdx = prev.currentObjectives[caseId] ?? 0;
+        const nextIdx = currentIdx + 1;
+        const completed = nextIdx >= totalObjectives;
+        return {
+          completedCases: completed
+            ? [...new Set([...prev.completedCases, caseId])]
+            : prev.completedCases,
+          currentObjectives: { ...prev.currentObjectives, [caseId]: nextIdx },
+        };
+      });
+
+      // Persist to Supabase
+      await fetch("/api/progress/advance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ caseId, totalObjectives }),
+      });
+    },
+    []
+  );
+
+  const resetProgress = useCallback(async () => {
+    setProgress(EMPTY);
+    await fetch("/api/progress/reset", { method: "POST" });
   }, []);
 
-  const resetProgress = useCallback(() => {
-    const fresh: GameProgress = { completedCases: [], currentObjectives: {} };
-    saveProgress(fresh);
-    setProgress(fresh);
-  }, []);
-
-  return { isCaseUnlocked, isCaseCompleted, getCurrentObjective, advanceObjective, resetProgress };
+  return {
+    isLoading,
+    isCaseUnlocked,
+    isCaseCompleted,
+    getCurrentObjective,
+    advanceObjective,
+    resetProgress,
+  };
 }
