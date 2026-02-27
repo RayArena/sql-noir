@@ -23,7 +23,7 @@ export default function CasePage() {
   const slug = params?.slug as string;
   const router = useRouter();
   const gameCase = CASES.find((c) => c.slug === slug);
-  const { getCurrentObjective, advanceObjective, isCaseUnlocked, isCaseCompleted } = useGameProgress();
+  const { getCurrentObjective, advanceObjective, isCaseUnlocked, isCaseCompleted, isLoading: progressLoading } = useGameProgress();
   const { toast } = useToast();
 
   const [mounted, setMounted] = useState(false);
@@ -60,11 +60,11 @@ export default function CasePage() {
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || progressLoading) return;
     if (!gameCase || !isCaseUnlocked(gameCase.id)) {
       router.replace("/cases");
     }
-  }, [mounted, gameCase, isCaseUnlocked, router]);
+  }, [mounted, progressLoading, gameCase, isCaseUnlocked, router]);
 
   const currentObjIdx = gameCase ? getCurrentObjective(gameCase.id) : 0;
   const completed = gameCase ? isCaseCompleted(gameCase.id) : false;
@@ -226,7 +226,7 @@ export default function CasePage() {
   return (
     <div className="h-screen flex flex-col noir-gradient">
       {/* Top bar */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border mt-[57px]">
         <Link href="/cases" className="text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="w-4 h-4" />
         </Link>
