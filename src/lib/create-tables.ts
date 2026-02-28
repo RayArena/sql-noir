@@ -9,7 +9,7 @@ async function main() {
   await sql`
     CREATE TABLE IF NOT EXISTS users (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      clerk_id TEXT,
+      clerk_id TEXT UNIQUE,
       email TEXT,
       full_name TEXT,
       username TEXT,

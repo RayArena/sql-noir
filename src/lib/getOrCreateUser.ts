@@ -57,6 +57,14 @@ export async function getOrCreateUser(): Promise<{ id: string } | null> {
         ${user.username ?? null}, ${user.imageUrl ?? null},
         ${primaryPhone}, ${now}, ${now}
       )
+      ON CONFLICT (clerk_id) DO UPDATE SET
+        email = EXCLUDED.email,
+        full_name = EXCLUDED.full_name,
+        username = EXCLUDED.username,
+        avatar_url = EXCLUDED.avatar_url,
+        phone_number = EXCLUDED.phone_number,
+        last_sign_in_at = EXCLUDED.last_sign_in_at,
+        updated_at = EXCLUDED.updated_at
       RETURNING id
     ` as { id: string }[];
   } catch (err) {
