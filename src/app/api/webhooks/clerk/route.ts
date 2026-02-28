@@ -1,7 +1,7 @@
 import { Webhook } from "svix";
 import { headers } from "next/headers";
 import type { WebhookEvent } from "@clerk/nextjs/server";
-import { supabaseAdmin } from "@/lib/supabase";
+import { sql } from "@/lib/db";
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -35,14 +35,17 @@ export async function POST(req: Request) {
 
   const { type, data } = evt;
 
+  // ── user.created / user.updated ────────────────────────────────────────────
   if (type === "user.created" || type === "user.updated") {
     const {
       id: clerk_id,
       email_addresses,
+      phone_numbers,
       first_name,
       last_name,
       username,
       image_url,
+      created_at,
     } = data;
 
     const primaryEmail =
@@ -51,41 +54,70 @@ export async function POST(req: Request) {
       email_addresses?.[0]?.email_address ??
       null;
 
+    const primaryPhone =
+      phone_numbers?.find((p) => p.id === data.primary_phone_number_id)
+        ?.phone_number ??
+      phone_numbers?.[0]?.phone_number ??
+      null;
+
     const full_name =
       [first_name, last_name].filter(Boolean).join(" ").trim() || null;
 
-    const { error } = await supabaseAdmin.from("users").upsert(
-      {
-        clerk_id,
-        email: primaryEmail,
-        full_name,
-        username: username ?? null,
-        avatar_url: image_url ?? null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "clerk_id" }
-    );
+    const now = new Date().toISOString();
+    const created_at_iso =
+      type === "user.created" && created_at
+        ? new Date(created_at).toISOString()
+        : now;
 
-    if (error) {
-      console.error("[webhook] upsert user error:", error);
-      return new Response("Supabase error", { status: 500 });
+    try {
+      await sql`
+        INSERT INTO users (clerk_id, email, full_name, username, avatar_url, phone_number, created_at, updated_at)
+        VALUES (
+          ${clerk_id}, ${primaryEmail}, ${full_name},
+          ${username ?? null}, ${image_url ?? null}, ${primaryPhone},
+          ${created_at_iso}, ${now}
+        )
+        ON CONFLICT (clerk_id) DO UPDATE SET
+          email        = ${primaryEmail},
+          full_name    = ${full_name},
+          username     = ${username ?? null},
+          avatar_url   = ${image_url ?? null},
+          phone_number = ${primaryPhone},
+          updated_at   = ${now}
+      `;
+    } catch (err) {
+      console.error("[webhook] upsert user error:", err);
+      return new Response("Database error", { status: 500 });
     }
 
     console.log(`[webhook] ${type} synced: ${clerk_id}`);
   }
 
+  // ── session.created → update last_sign_in_at ───────────────────────────────
+  if (type === "session.created") {
+    const { user_id: clerk_id } = data as { user_id: string };
+    const now = new Date().toISOString();
+
+    try {
+      await sql`UPDATE users SET last_sign_in_at = ${now} WHERE clerk_id = ${clerk_id}`;
+    } catch (err) {
+      console.error("[webhook] session.created update error:", err);
+      return new Response("Database error", { status: 500 });
+    }
+
+    console.log(`[webhook] session.created synced: ${clerk_id}`);
+  }
+
+  // ── user.deleted ───────────────────────────────────────────────────────────
   if (type === "user.deleted") {
     const { id: clerk_id } = data;
     if (clerk_id) {
       // Delete user — game_progress cascades automatically
-      const { error } = await supabaseAdmin
-        .from("users")
-        .delete()
-        .eq("clerk_id", clerk_id);
-
-      if (error) {
-        console.error("[webhook] delete user error:", error);
-        return new Response("Supabase error", { status: 500 });
+      try {
+        await sql`DELETE FROM users WHERE clerk_id = ${clerk_id}`;
+      } catch (err) {
+        console.error("[webhook] delete user error:", err);
+        return new Response("Database error", { status: 500 });
       }
       console.log(`[webhook] user.deleted synced: ${clerk_id}`);
     }

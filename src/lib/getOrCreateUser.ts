@@ -1,25 +1,37 @@
 import { currentUser } from "@clerk/nextjs/server";
-import { supabaseAdmin } from "@/lib/supabase";
+import { sql } from "@/lib/db";
 
 /**
- * Returns the Supabase user row for the currently authenticated Clerk user.
+ * Returns the Neon DB user row for the currently authenticated Clerk user.
  * If the row doesn't exist yet, it is created automatically.
  * This removes the need for a Clerk webhook during development.
  */
-export async function getOrCreateSupabaseUser(): Promise<{ id: string } | null> {
+export async function getOrCreateUser(): Promise<{ id: string } | null> {
   const user = await currentUser();
-  if (!user) return null;
+  if (!user) {
+    console.warn("[getOrCreateUser] no Clerk session — returning null");
+    return null;
+  }
+
+  console.log("[getOrCreateUser] clerk_id:", user.id);
 
   // Try to find existing row
-  const { data: existing } = await supabaseAdmin
-    .from("users")
-    .select("id")
-    .eq("clerk_id", user.id)
-    .single();
+  let existing: { id: string }[] = [];
+  try {
+    existing = await sql`SELECT id FROM users WHERE clerk_id = ${user.id}` as { id: string }[];
+  } catch (err) {
+    console.error("[getOrCreateUser] select error:", err);
+    return null;
+  }
 
-  if (existing) return existing as { id: string };
+  if (existing.length > 0) {
+    console.log("[getOrCreateUser] found existing user:", existing[0].id);
+    return existing[0];
+  }
 
   // Auto-create on first access (replaces webhook for local dev)
+  console.log("[getOrCreateUser] creating new user for clerk_id:", user.id);
+
   const primaryEmail =
     user.emailAddresses?.find((e) => e.id === user.primaryEmailAddressId)
       ?.emailAddress ??
@@ -29,18 +41,34 @@ export async function getOrCreateSupabaseUser(): Promise<{ id: string } | null> 
   const full_name =
     [user.firstName, user.lastName].filter(Boolean).join(" ").trim() || null;
 
-  const { data: created } = await supabaseAdmin
-    .from("users")
-    .insert({
-      clerk_id: user.id,
-      email: primaryEmail,
-      full_name,
-      username: user.username ?? null,
-      avatar_url: user.imageUrl ?? null,
-      updated_at: new Date().toISOString(),
-    })
-    .select("id")
-    .single();
+  const primaryPhone =
+    user.phoneNumbers?.find((p) => p.id === user.primaryPhoneNumberId)
+      ?.phoneNumber ??
+    user.phoneNumbers?.[0]?.phoneNumber ??
+    null;
 
-  return created as { id: string } | null;
+  const now = new Date().toISOString();
+  let created: { id: string }[] = [];
+  try {
+    created = await sql`
+      INSERT INTO users (clerk_id, email, full_name, username, avatar_url, phone_number, last_sign_in_at, updated_at)
+      VALUES (
+        ${user.id}, ${primaryEmail}, ${full_name},
+        ${user.username ?? null}, ${user.imageUrl ?? null},
+        ${primaryPhone}, ${now}, ${now}
+      )
+      RETURNING id
+    ` as { id: string }[];
+  } catch (err) {
+    console.error("[getOrCreateUser] insert error:", err);
+    return null;
+  }
+
+  if (!created.length) {
+    console.error("[getOrCreateUser] insert returned no rows");
+    return null;
+  }
+
+  console.log("[getOrCreateUser] created user:", created[0].id);
+  return created[0];
 }
