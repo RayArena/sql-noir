@@ -13,7 +13,7 @@ export function useGameProgress() {
   const [progress, setProgress] = useState<GameProgress>(EMPTY);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load progress from Supabase via API route on mount
+  // Load progress from Neon DB via API route on mount
   useEffect(() => {
     let cancelled = false;
     fetch("/api/progress")
@@ -67,7 +67,7 @@ export function useGameProgress() {
         };
       });
 
-      // Persist to Supabase
+      // Persist to Neon DB
       await fetch("/api/progress/advance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
