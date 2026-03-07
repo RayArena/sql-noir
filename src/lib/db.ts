@@ -1,7 +1,12 @@
-import { neon } from "@neondatabase/serverless";
+import postgres from "postgres";
 
-// Neon serverless PostgreSQL client — uses DATABASE_URL from environment
-export const sql = neon(process.env.DATABASE_URL!);
+// Supabase PostgreSQL client via postgres.js — uses DATABASE_URL from environment
+export const sql = postgres(process.env.DATABASE_URL!, {
+  ssl: "require",
+  max: 1,
+  idle_timeout: 20,
+  connect_timeout: 10,
+});
 
 // ── Convenience row shapes (for type safety in API routes) ───────────────────
 export interface DbUser {

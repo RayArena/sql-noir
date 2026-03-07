@@ -12,10 +12,12 @@ async function main() {
   console.log("Tables in database:");
   tables.forEach((row) => console.log(`- ${row.table_name}`));
 
+  await sql.end();
   process.exit(0);
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error(err);
+  await sql.end();
   process.exit(1);
 });
