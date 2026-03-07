@@ -581,24 +581,25 @@ function generateMockResults(caseId: number, objectiveIdx: number, query: string
     // Phase 2 (idx 1): Filter guests who stayed past / during blackout
     if (objectiveIdx === 1) {
       if (q.includes("mansion_guest_list")) {
-        if (q.includes("null") || (q.includes("departure") && q.includes("20"))) {
+        if (q.includes("00:00") || q.includes("> '20:15") || (q.includes("departure") && q.includes("20"))) {
           return { rows: [
-            { guest_id: 2,  citizen_id: 1002, arrival_time: "18:00:00", departure_time: "21:30:00", invite_status: "Confirmed" },
-            { guest_id: 4,  citizen_id: 1004, arrival_time: "17:45:00", departure_time: "23:30:00", invite_status: "Plus-One" },
-            { guest_id: 5,  citizen_id: 1005, arrival_time: "18:00:00", departure_time: "23:30:00", invite_status: "VIP" },
-            { guest_id: 7,  citizen_id: 1007, arrival_time: "17:45:00", departure_time: "23:30:00", invite_status: "Confirmed" },
-            { guest_id: 8,  citizen_id: 1008, arrival_time: "19:45:00", departure_time: "23:00:00", invite_status: "Plus-One" },
-            { guest_id: 10, citizen_id: 1010, arrival_time: "18:45:00", departure_time: "23:00:00", invite_status: "Plus-One" },
-            { guest_id: 17, citizen_id: 1017, arrival_time: "19:15:00", departure_time: null,        invite_status: "Confirmed" },
-            { guest_id: 42, citizen_id: 1042, arrival_time: "17:30:00", departure_time: null,        invite_status: "Confirmed" },
-            { guest_id: 89, citizen_id: 1089, arrival_time: "18:00:00", departure_time: null,        invite_status: "Confirmed" },
-            { guest_id: 11, citizen_id: 1011, arrival_time: "17:30:00", departure_time: "20:45:00", invite_status: "Confirmed" },
+            { guest_id: 2,  citizen_id: 1002, arrival_time: "19:00:00", departure_time: "21:15:00", invite_status: "VIP" },
+            { guest_id: 4,  citizen_id: 1004, arrival_time: "17:00:00", departure_time: "23:30:00", invite_status: "Confirmed" },
+            { guest_id: 5,  citizen_id: 1005, arrival_time: "17:30:00", departure_time: "23:00:00", invite_status: "Confirmed" },
+            { guest_id: 6,  citizen_id: 1006, arrival_time: "18:15:00", departure_time: "21:15:00", invite_status: "VIP" },
+            { guest_id: 8,  citizen_id: 1008, arrival_time: "18:00:00", departure_time: "22:45:00", invite_status: "VIP" },
+            { guest_id: 9,  citizen_id: 1009, arrival_time: "19:45:00", departure_time: "20:45:00", invite_status: "VIP" },
+            { guest_id: 11, citizen_id: 1011, arrival_time: "19:30:00", departure_time: "21:45:00", invite_status: "Plus-One" },
+            { guest_id: 17, citizen_id: 1017, arrival_time: "17:30:00", departure_time: "23:45:00", invite_status: "Confirmed" },
+            { guest_id: 42, citizen_id: 1042, arrival_time: "18:30:00", departure_time: "00:00:00", invite_status: "Confirmed" },
+            { guest_id: 89, citizen_id: 1089, arrival_time: "17:30:00", departure_time: "23:30:00", invite_status: "Confirmed" },
+            // …(showing 10 of ~90 rows)
           ]};
         }
         return { rows: [
-          { guest_id: 1, citizen_id: 1001, arrival_time: "19:45:00", departure_time: "18:30:00", invite_status: "Confirmed" },
-          { guest_id: 2, citizen_id: 1002, arrival_time: "18:00:00", departure_time: "21:30:00", invite_status: "Confirmed" },
-          { guest_id: 3, citizen_id: 1003, arrival_time: "17:00:00", departure_time: "19:30:00", invite_status: "Plus-One" },
+          { guest_id: 1,  citizen_id: 1001, arrival_time: "18:45:00", departure_time: "23:30:00", invite_status: "Confirmed" },
+          { guest_id: 2,  citizen_id: 1002, arrival_time: "19:00:00", departure_time: "21:15:00", invite_status: "VIP" },
+          { guest_id: 3,  citizen_id: 1003, arrival_time: "19:00:00", departure_time: "17:30:00", invite_status: "Confirmed" },
         ]};
       }
     }
@@ -607,21 +608,21 @@ function generateMockResults(caseId: number, objectiveIdx: number, query: string
     if (objectiveIdx === 2) {
       if (q.includes("calcutta_citizens") && q.includes("kolhapuri")) {
         return { rows: [
-          { citizen_id: 1001, full_name: "Subhash Talukdar" },
-          { citizen_id: 1002, full_name: "Sarada Manna" },
-          { citizen_id: 1003, full_name: "Rani Chakraborty" },
-          { citizen_id: 1005, full_name: "Amitava Samanta" },
-          { citizen_id: 1008, full_name: "Chittaranjan Sanyal" },
-          { citizen_id: 1011, full_name: "Jiban Majumdar" },
-          { citizen_id: 1014, full_name: "Hasi Manna" },
+          { citizen_id: 1001, full_name: "Subhash Samanta" },
+          { citizen_id: 1003, full_name: "Sarada Chakraborty" },
+          { citizen_id: 1005, full_name: "Hiren Bose" },
+          { citizen_id: 1008, full_name: "Ranajit Roy" },
+          { citizen_id: 1011, full_name: "Sudhin Majumdar" },
+          { citizen_id: 1014, full_name: "Indira Pramanik" },
           { citizen_id: 1017, full_name: "Amitava Bose" },
-          { citizen_id: 1022, full_name: "Khagen Sanyal" },
-          { citizen_id: 1025, full_name: "Satish Hazra" },
-          { citizen_id: 1038, full_name: "Jagadish Manna" },
+          { citizen_id: 1022, full_name: "Sudhin Sanyal" },
+          { citizen_id: 1025, full_name: "Bimal Talukdar" },
+          { citizen_id: 1038, full_name: "Prakash Chowdhury" },
           { citizen_id: 1042, full_name: "Bhavani Shankar" },
-          { citizen_id: 1049, full_name: "Sushil Lahiri" },
+          { citizen_id: 1044, full_name: "Ranajit Bose" },
+          { citizen_id: 1049, full_name: "Prabha Giri" },
+          { citizen_id: 1052, full_name: "Fanibhushan Lahiri" },
           { citizen_id: 1089, full_name: "Devdas Mukherjee" },
-          { citizen_id: 1044, full_name: "Usha Banerjee" },
           // …(showing 15 of 60 rows)
         ]};
       }
@@ -632,25 +633,26 @@ function generateMockResults(caseId: number, objectiveIdx: number, query: string
       if (q.includes("sweet_shop_orders") && q.includes("nalen gur")) {
         return { rows: [
           { citizen_id: 1017 }, { citizen_id: 1042 }, { citizen_id: 1089 },
-          { citizen_id: 1121 }, { citizen_id: 1076 }, { citizen_id: 1115 },
-          { citizen_id: 1091 }, { citizen_id: 1084 }, { citizen_id: 1061 },
-          { citizen_id: 1088 }, { citizen_id: 1063 }, { citizen_id: 1087 },
-          { citizen_id: 1095 }, { citizen_id: 1085 }, { citizen_id: 1077 },
+          { citizen_id: 1105 }, { citizen_id: 1107 }, { citizen_id: 1116 },
+          { citizen_id: 1110 }, { citizen_id: 1106 }, { citizen_id: 1096 },
+          { citizen_id: 1067 }, { citizen_id: 1104 }, { citizen_id: 1123 },
+          { citizen_id: 1090 }, { citizen_id: 1095 }, { citizen_id: 1085 },
         ]};
       }
     }
 
-    // Phase 5 (idx 4): Cross-reference both lists
+    // Phase 5 (idx 4): Cross-reference both lists via master view
     if (objectiveIdx === 4) {
       if (
+        q.includes("calcutta_investigation_master_view") ||
         (q.includes("calcutta_citizens") && q.includes("sweet_shop_orders")) ||
         (q.includes("calcutta_citizens") && q.includes("kolhapuri") && q.includes("nalen gur")) ||
         (q.includes("calcutta_citizens") && q.includes("kolhapuri") && q.includes("in"))
       ) {
         return { rows: [
-          { citizen_id: 1017, full_name: "Amitava Bose" },
-          { citizen_id: 1042, full_name: "Bhavani Shankar" },
-          { citizen_id: 1089, full_name: "Devdas Mukherjee" },
+          { full_name: "Amitava Bose" },
+          { full_name: "Bhavani Shankar" },
+          { full_name: "Devdas Mukherjee" },
         ]};
       }
     }
@@ -673,14 +675,17 @@ function generateMockResults(caseId: number, objectiveIdx: number, query: string
     // Phase 7 (idx 6): Find which suspect lives in Shyambazar
     if (objectiveIdx === 6) {
       if (q.includes("calcutta_citizens")) {
-        if (q.includes("shyambazar")) {
+        if (
+          (q.includes("amitava") || q.includes("bhavani") || q.includes("devdas") || q.includes("1017") || q.includes("1042") || q.includes("1089")) &&
+          q.includes("shyambazar")
+        ) {
           return { rows: [{ full_name: "Bhavani Shankar", neighborhood: "Shyambazar" }] };
         }
-        if (q.includes("1017") || q.includes("1042") || q.includes("1089")) {
+        if (q.includes("amitava") || q.includes("bhavani") || q.includes("devdas") || q.includes("1017") || q.includes("1042") || q.includes("1089")) {
           return { rows: [
-            { citizen_id: 1017, full_name: "Amitava Bose",      neighborhood: "Ballygunge" },
-            { citizen_id: 1042, full_name: "Bhavani Shankar",   neighborhood: "Shyambazar" },
-            { citizen_id: 1089, full_name: "Devdas Mukherjee",  neighborhood: "Tollygunge" },
+            { full_name: "Amitava Bose",     neighborhood: "Ballygunge" },
+            { full_name: "Bhavani Shankar",  neighborhood: "Shyambazar" },
+            { full_name: "Devdas Mukherjee", neighborhood: "Tollygunge" },
           ]};
         }
       }
@@ -690,11 +695,14 @@ function generateMockResults(caseId: number, objectiveIdx: number, query: string
     if (objectiveIdx === 7) {
       if (q.includes("employment_history")) {
         if (q.includes("1042")) {
-          return { rows: [{ job_title: "Master Gem Cutter", termination_reason: "Embezzlement" }] };
+          return { rows: [
+            { job_title: "Master Gem Cutter",     termination_reason: "Embezzlement" },
+            { job_title: "Apprentice Gem Cutter", termination_reason: "Resigned" },
+          ]};
         }
         return { rows: [
-          { record_id: 5001, citizen_id: 1042, job_title: "Master Gem Cutter",     start_date: "1944-03-15", end_date: "1946-07-20", termination_reason: "Embezzlement" },
-          { record_id: 5002, citizen_id: 1042, job_title: "Apprentice Gem Cutter", start_date: "1938-06-01", end_date: "1944-02-28", termination_reason: "Resigned" },
+          { record_id: 5002, citizen_id: 1042, job_title: "Master Gem Cutter",     start_date: "1944-03-15", end_date: "1946-07-20", termination_reason: "Embezzlement" },
+          { record_id: 5001, citizen_id: 1042, job_title: "Apprentice Gem Cutter", start_date: "1938-06-01", end_date: "1944-02-28", termination_reason: "Resigned" },
         ]};
       }
     }

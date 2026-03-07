@@ -34,7 +34,7 @@ export const CASES: GameCase[] = [
     id: 1,
     slug: "the-royal-ruby",
     title: "The Case of the Royal Ruby",
-    subtitle: "SELECT · WHERE · IS NULL · LIKE · IN",
+    subtitle: "SELECT · FROM · WHERE · AND · OR · LIKE · ORDER BY",
     difficulty: "Rookie",
     teaser: "A priceless ruby stolen under cover of a suspicious blackout. Byomkesh Bakshi needs his Archivist.",
     briefing:
@@ -117,6 +117,22 @@ export const CASES: GameCase[] = [
             { name: "shift_end", type: "TIME" },
           ],
         },
+        {
+          name: "calcutta_investigation_master_view",
+          columns: [
+            { name: "citizen_id", type: "INT" },
+            { name: "full_name", type: "VARCHAR(100)" },
+            { name: "neighborhood", type: "VARCHAR(60)" },
+            { name: "shoe_size", type: "INT" },
+            { name: "footwear_preference", type: "VARCHAR(40)" },
+            { name: "arrival_time", type: "TIME" },
+            { name: "departure_time", type: "TIME" },
+            { name: "item_description", type: "VARCHAR(100)" },
+            { name: "order_date", type: "DATE" },
+            { name: "job_title", type: "VARCHAR(60)" },
+            { name: "termination_reason", type: "VARCHAR(80)" },
+          ],
+        },
       ],
     },
     objectives: [
@@ -136,8 +152,8 @@ export const CASES: GameCase[] = [
         id: "1-2",
         title: "Phase 2: Filtering the Guests",
         description:
-          "Pull from mansion_guest_list all guests whose departure_time is AFTER '20:15:00' OR whose departure_time IS NULL. The thief is in this list.",
-        hint: "SELECT * FROM mansion_guest_list WHERE departure_time > '20:15:00' OR departure_time IS NULL",
+          "Pull from mansion_guest_list everyone whose departure_time is after '20:15:00' OR equals '00:00:00'. Note: '00:00:00' is the staff code for a departure that was never recorded — the thief slipped out without signing the register.",
+        hint: "SELECT * FROM mansion_guest_list WHERE departure_time > '20:15:00' OR departure_time = '00:00:00'",
         validationFn: (rows) =>
           rows.length >= 5 && rows.some((r) => r.citizen_id !== undefined),
         successMessage: "Suspects narrowed. The thief was still in the building.",
@@ -172,8 +188,8 @@ export const CASES: GameCase[] = [
         id: "1-5",
         title: "Phase 5: The Intersection",
         description:
-          "Cross-reference: find citizens who BOTH wear size 10 Kolhapuri chappals AND bought Nalen Gur on 1946-10-04. Use a subquery with IN or a JOIN.",
-        hint: "SELECT citizen_id, full_name FROM calcutta_citizens WHERE shoe_size = 10 AND footwear_preference = 'Kolhapuri' AND citizen_id IN (SELECT citizen_id FROM sweet_shop_orders WHERE item_description LIKE '%Nalen Gur%' AND order_date = '1946-10-04')",
+          "Cross-reference all four conditions in a single query. The calcutta_investigation_master_view combines every table into one flat view — no JOINs needed. Filter by shoe_size, footwear_preference, item_description LIKE, and order_date using AND.",
+        hint: "SELECT full_name FROM calcutta_investigation_master_view WHERE shoe_size = 10 AND footwear_preference = 'Kolhapuri' AND item_description LIKE '%Nalen Gur%' AND order_date = '1946-10-04'",
         validationFn: (rows) =>
           rows.length >= 2 &&
           rows.some((r) =>
@@ -203,8 +219,8 @@ export const CASES: GameCase[] = [
         id: "1-7",
         title: "Phase 7: Pinpointing the Target",
         description:
-          "Query calcutta_citizens. From our three suspects (citizen_id IN (1017, 1042, 1089)), find who lives in neighborhood = 'Shyambazar'.",
-        hint: "SELECT full_name, neighborhood FROM calcutta_citizens WHERE citizen_id IN (1017, 1042, 1089) AND neighborhood = 'Shyambazar'",
+          "Query calcutta_citizens. List the three suspect names using OR, then AND with neighborhood = 'Shyambazar'. Mind your brackets — OR and AND do not mix properly without them.",
+        hint: "SELECT full_name, neighborhood FROM calcutta_citizens WHERE (full_name = 'Amitava Bose' OR full_name = 'Bhavani Shankar' OR full_name = 'Devdas Mukherjee') AND neighborhood = 'Shyambazar'",
         validationFn: (rows) =>
           rows.some((r) =>
             String(r.full_name ?? r.answer ?? "").toLowerCase().includes("bhavani")
@@ -217,8 +233,8 @@ export const CASES: GameCase[] = [
         id: "1-8",
         title: "Phase 8: The Motive",
         description:
-          "Query employment_history for citizen_id = 1042. Use ORDER BY end_date DESC LIMIT 1 to get his most recent job and termination reason.",
-        hint: "SELECT job_title, termination_reason FROM employment_history WHERE citizen_id = 1042 ORDER BY end_date DESC LIMIT 1",
+          "Query employment_history for citizen_id = 1042. Sort by end_date DESC — most recent job at the top. The first row will tell you everything.",
+        hint: "SELECT job_title, termination_reason FROM employment_history WHERE citizen_id = 1042 ORDER BY end_date DESC",
         validationFn: (rows) =>
           rows.some(
             (r) =>
