@@ -204,6 +204,16 @@ export default function CasePage() {
           ...tableLines.map((l) => ({ type: "output" as LineType, content: l })),
           { type: "output", content: "" },
         ]);
+        // Auto-advance if this query satisfies the current objective
+        if (currentObjective && currentObjective.validationFn(mockResults.rows)) {
+          addLines([
+            { type: "success", content: `✓ ${currentObjective.successMessage}` },
+            { type: "output", content: "" },
+          ]);
+          toast({ title: "🔍 " + currentObjective.successMessage, description: "Objective complete." });
+          setNarratives((prev) => [...prev, currentObjective.narrativeAfter]);
+          advanceObjective(gameCase.id, gameCase.objectives.length);
+        }
       }
       setIsRunning(false);
     }, 600);
@@ -554,31 +564,161 @@ function generateMockResults(caseId: number, objectiveIdx: number, query: string
   }
 
   if (caseId === 1) {
+    // Phase 1 (idx 0): Blackout time from police_fir_logs
     if (objectiveIdx === 0) {
-      if (q.includes("citizens") && (q.includes("elena") || q.includes("vasquez") || q.includes("*"))) {
-        return { rows: [{ id: 7, first_name: "Elena", last_name: "Vasquez", age: 34, address: "42 River Lane", district: "Riverside", occupation: "Accountant", phone: "555-0147", status: "missing" }] };
+      if (q.includes("police_fir_logs")) {
+        if (q.includes("sovabazar") || q.includes("where")) {
+          return { rows: [{ reported_time: "20:15:00" }] };
+        }
+        return { rows: [
+          { fir_id: 101, location: "Sovabazar Rajbari", incident_type: "Theft / Blackout", reported_time: "20:15:00", officer_in_charge: "Inspector Das" },
+          { fir_id: 102, location: "Burrabazar Market", incident_type: "Pickpocketing", reported_time: "14:30:00", officer_in_charge: "Sub-Inspector Roy" },
+          { fir_id: 103, location: "Hatibagan Lane 4", incident_type: "Assault", reported_time: "22:45:00", officer_in_charge: "Inspector Das" },
+        ]};
       }
-      return { rows: [
-        { id: 1, first_name: "John", last_name: "Miller", age: 45, address: "12 Oak St", district: "Downtown", occupation: "Lawyer", phone: "555-0101", status: "active" },
-        { id: 3, first_name: "Sarah", last_name: "Chen", age: 29, address: "88 Pine Ave", district: "Eastside", occupation: "Teacher", phone: "555-0103", status: "active" },
-        { id: 7, first_name: "Elena", last_name: "Vasquez", age: 34, address: "42 River Lane", district: "Riverside", occupation: "Accountant", phone: "555-0147", status: "missing" },
-      ]};
     }
+
+    // Phase 2 (idx 1): Filter guests who stayed past / during blackout
     if (objectiveIdx === 1) {
-      if (q.includes("sightings")) {
+      if (q.includes("mansion_guest_list")) {
+        if (q.includes("null") || (q.includes("departure") && q.includes("20"))) {
+          return { rows: [
+            { guest_id: 2,  citizen_id: 1002, arrival_time: "18:00:00", departure_time: "21:30:00", invite_status: "Confirmed" },
+            { guest_id: 4,  citizen_id: 1004, arrival_time: "17:45:00", departure_time: "23:30:00", invite_status: "Plus-One" },
+            { guest_id: 5,  citizen_id: 1005, arrival_time: "18:00:00", departure_time: "23:30:00", invite_status: "VIP" },
+            { guest_id: 7,  citizen_id: 1007, arrival_time: "17:45:00", departure_time: "23:30:00", invite_status: "Confirmed" },
+            { guest_id: 8,  citizen_id: 1008, arrival_time: "19:45:00", departure_time: "23:00:00", invite_status: "Plus-One" },
+            { guest_id: 10, citizen_id: 1010, arrival_time: "18:45:00", departure_time: "23:00:00", invite_status: "Plus-One" },
+            { guest_id: 17, citizen_id: 1017, arrival_time: "19:15:00", departure_time: null,        invite_status: "Confirmed" },
+            { guest_id: 42, citizen_id: 1042, arrival_time: "17:30:00", departure_time: null,        invite_status: "Confirmed" },
+            { guest_id: 89, citizen_id: 1089, arrival_time: "18:00:00", departure_time: null,        invite_status: "Confirmed" },
+            { guest_id: 11, citizen_id: 1011, arrival_time: "17:30:00", departure_time: "20:45:00", invite_status: "Confirmed" },
+          ]};
+        }
         return { rows: [
-          { id: 1, citizen_id: 7, location: "Riverside Cafe", seen_at: "2024-03-12 09:30:00", reported_by: "Officer Davis" },
-          { id: 2, citizen_id: 7, location: "5th & Main Warehouse", seen_at: "2024-03-13 22:15:00", reported_by: "Anonymous" },
+          { guest_id: 1, citizen_id: 1001, arrival_time: "19:45:00", departure_time: "18:30:00", invite_status: "Confirmed" },
+          { guest_id: 2, citizen_id: 1002, arrival_time: "18:00:00", departure_time: "21:30:00", invite_status: "Confirmed" },
+          { guest_id: 3, citizen_id: 1003, arrival_time: "17:00:00", departure_time: "19:30:00", invite_status: "Plus-One" },
         ]};
       }
     }
+
+    // Phase 3 (idx 2): Size 10 Kolhapuri wearers
     if (objectiveIdx === 2) {
-      if (q.includes("citizens") && q.includes("riverside")) {
+      if (q.includes("calcutta_citizens") && q.includes("kolhapuri")) {
         return { rows: [
-          { id: 5, first_name: "Marco", last_name: "Rivera", age: 41, address: "38 River Lane", district: "Riverside", occupation: "Mechanic", phone: "555-0130", status: "active" },
-          { id: 9, first_name: "Linda", last_name: "Park", age: 52, address: "50 River Lane", district: "Riverside", occupation: "Retired", phone: "555-0160", status: "active" },
-          { id: 12, first_name: "Tom", last_name: "Nguyen", age: 28, address: "44 River Lane", district: "Riverside", occupation: "Freelancer", phone: "555-0177", status: "active" },
+          { citizen_id: 1001, full_name: "Subhash Talukdar" },
+          { citizen_id: 1002, full_name: "Sarada Manna" },
+          { citizen_id: 1003, full_name: "Rani Chakraborty" },
+          { citizen_id: 1005, full_name: "Amitava Samanta" },
+          { citizen_id: 1008, full_name: "Chittaranjan Sanyal" },
+          { citizen_id: 1011, full_name: "Jiban Majumdar" },
+          { citizen_id: 1014, full_name: "Hasi Manna" },
+          { citizen_id: 1017, full_name: "Amitava Bose" },
+          { citizen_id: 1022, full_name: "Khagen Sanyal" },
+          { citizen_id: 1025, full_name: "Satish Hazra" },
+          { citizen_id: 1038, full_name: "Jagadish Manna" },
+          { citizen_id: 1042, full_name: "Bhavani Shankar" },
+          { citizen_id: 1049, full_name: "Sushil Lahiri" },
+          { citizen_id: 1089, full_name: "Devdas Mukherjee" },
+          { citizen_id: 1044, full_name: "Usha Banerjee" },
+          // …(showing 15 of 60 rows)
         ]};
+      }
+    }
+
+    // Phase 4 (idx 3): Sweet shop Nalen Gur orders
+    if (objectiveIdx === 3) {
+      if (q.includes("sweet_shop_orders") && q.includes("nalen gur")) {
+        return { rows: [
+          { citizen_id: 1017 }, { citizen_id: 1042 }, { citizen_id: 1089 },
+          { citizen_id: 1121 }, { citizen_id: 1076 }, { citizen_id: 1115 },
+          { citizen_id: 1091 }, { citizen_id: 1084 }, { citizen_id: 1061 },
+          { citizen_id: 1088 }, { citizen_id: 1063 }, { citizen_id: 1087 },
+          { citizen_id: 1095 }, { citizen_id: 1085 }, { citizen_id: 1077 },
+        ]};
+      }
+    }
+
+    // Phase 5 (idx 4): Cross-reference both lists
+    if (objectiveIdx === 4) {
+      if (
+        (q.includes("calcutta_citizens") && q.includes("sweet_shop_orders")) ||
+        (q.includes("calcutta_citizens") && q.includes("kolhapuri") && q.includes("nalen gur")) ||
+        (q.includes("calcutta_citizens") && q.includes("kolhapuri") && q.includes("in"))
+      ) {
+        return { rows: [
+          { citizen_id: 1017, full_name: "Amitava Bose" },
+          { citizen_id: 1042, full_name: "Bhavani Shankar" },
+          { citizen_id: 1089, full_name: "Devdas Mukherjee" },
+        ]};
+      }
+    }
+
+    // Phase 6 (idx 5): Tram ticket prefix T-89
+    if (objectiveIdx === 5) {
+      if (q.includes("calcutta_tram_logs")) {
+        if (q.includes("t-89") || q.includes("t89")) {
+          return { rows: [{ destination: "Shyambazar" }] };
+        }
+        return { rows: [
+          { route_id: 201, ticket_prefix: "T-89", destination: "Shyambazar",  operating_hours: "06:00-22:30" },
+          { route_id: 202, ticket_prefix: "T-12", destination: "Ballygunge",  operating_hours: "05:30-23:00" },
+          { route_id: 203, ticket_prefix: "T-34", destination: "Tollygunge", operating_hours: "06:00-21:00" },
+          { route_id: 204, ticket_prefix: "T-56", destination: "Kalighat",   operating_hours: "05:45-22:00" },
+        ]};
+      }
+    }
+
+    // Phase 7 (idx 6): Find which suspect lives in Shyambazar
+    if (objectiveIdx === 6) {
+      if (q.includes("calcutta_citizens")) {
+        if (q.includes("shyambazar")) {
+          return { rows: [{ full_name: "Bhavani Shankar", neighborhood: "Shyambazar" }] };
+        }
+        if (q.includes("1017") || q.includes("1042") || q.includes("1089")) {
+          return { rows: [
+            { citizen_id: 1017, full_name: "Amitava Bose",      neighborhood: "Ballygunge" },
+            { citizen_id: 1042, full_name: "Bhavani Shankar",   neighborhood: "Shyambazar" },
+            { citizen_id: 1089, full_name: "Devdas Mukherjee",  neighborhood: "Tollygunge" },
+          ]};
+        }
+      }
+    }
+
+    // Phase 8 (idx 7): Employment history — most recent job for citizen 1042
+    if (objectiveIdx === 7) {
+      if (q.includes("employment_history")) {
+        if (q.includes("1042")) {
+          return { rows: [{ job_title: "Master Gem Cutter", termination_reason: "Embezzlement" }] };
+        }
+        return { rows: [
+          { record_id: 5001, citizen_id: 1042, job_title: "Master Gem Cutter",     start_date: "1944-03-15", end_date: "1946-07-20", termination_reason: "Embezzlement" },
+          { record_id: 5002, citizen_id: 1042, job_title: "Apprentice Gem Cutter", start_date: "1938-06-01", end_date: "1944-02-28", termination_reason: "Resigned" },
+        ]};
+      }
+    }
+
+    // Phase 9 (idx 8): Rajbari staff with name Shankar
+    if (objectiveIdx === 8) {
+      if (q.includes("rajbari_staff")) {
+        if (q.includes("shankar")) {
+          return { rows: [{ full_name: "Lata Shankar", role: "Maid" }] };
+        }
+        return { rows: [
+          { staff_id: 301, full_name: "Lata Shankar",         role: "Maid",         shift_start: "07:00:00", shift_end: "21:00:00" },
+          { staff_id: 302, full_name: "Gopal Halder",         role: "Head Butler",  shift_start: "08:00:00", shift_end: "22:00:00" },
+          { staff_id: 303, full_name: "Surendra Koley",       role: "Cook",         shift_start: "06:00:00", shift_end: "20:00:00" },
+          { staff_id: 309, full_name: "Hiralal Saha",         role: "Electrician",  shift_start: "09:00:00", shift_end: "21:00:00" },
+          { staff_id: 314, full_name: "Jagannath Bera",       role: "Night Watchman", shift_start: "20:00:00", shift_end: "06:00:00" },
+        ]};
+      }
+    }
+
+    // Phase 10 (idx 9): Final arrest warrant query
+    if (objectiveIdx === 9) {
+      if (q.includes("calcutta_citizens") && (q.includes("bhavani shankar") || q.includes("1042"))) {
+        return { rows: [{ citizen_id: 1042, full_name: "Bhavani Shankar", neighborhood: "Shyambazar" }] };
       }
     }
   }

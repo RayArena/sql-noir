@@ -32,69 +32,232 @@ export interface GameCase {
 export const CASES: GameCase[] = [
   {
     id: 1,
-    slug: "the-missing-witness",
-    title: "The Missing Witness",
-    subtitle: "Basic SELECT & WHERE",
+    slug: "the-royal-ruby",
+    title: "The Case of the Royal Ruby",
+    subtitle: "SELECT · WHERE · IS NULL · LIKE · IN",
     difficulty: "Rookie",
-    teaser: "A key witness has vanished before the trial. Dig through citizen records to find them.",
+    teaser: "A priceless ruby stolen under cover of a suspicious blackout. Byomkesh Bakshi needs his Archivist.",
     briefing:
-      "Detective, we have a problem. Our star witness for the Moretti trial — one Elena Vasquez — has disappeared. Last seen three days ago. We need you to query our citizen database and track her down before the trial begins tomorrow morning.",
+      "Calcutta, 1946. The Surya Ruby — crown jewel of the Sovabazar Rajbari — has vanished during a grand soiree. The lights went out, the display case was smashed, and Inspector Das has already clapped an innocent electrician in irons. But Byomkesh Bakshi, the Satyanweshi, is not convinced. He has summoned you — his Archivist — to work the evidence terminal. Seven tables of data, ten queries to run. Find the real thief before dawn breaks over the Hooghly.",
     schema: {
       tables: [
         {
-          name: "citizens",
+          name: "police_fir_logs",
           columns: [
-            { name: "id", type: "INTEGER", key: "PK" },
-            { name: "first_name", type: "TEXT" },
-            { name: "last_name", type: "TEXT" },
-            { name: "age", type: "INTEGER" },
-            { name: "address", type: "TEXT" },
-            { name: "district", type: "TEXT" },
-            { name: "occupation", type: "TEXT" },
-            { name: "phone", type: "TEXT" },
-            { name: "status", type: "TEXT" },
+            { name: "fir_id", type: "INT", key: "PK" },
+            { name: "location", type: "VARCHAR(100)" },
+            { name: "incident_type", type: "VARCHAR(80)" },
+            { name: "reported_time", type: "TIME" },
+            { name: "officer_in_charge", type: "VARCHAR(60)" },
           ],
         },
         {
-          name: "sightings",
+          name: "mansion_guest_list",
           columns: [
-            { name: "id", type: "INTEGER", key: "PK" },
-            { name: "citizen_id", type: "INTEGER", key: "FK" },
-            { name: "location", type: "TEXT" },
-            { name: "seen_at", type: "TIMESTAMP" },
-            { name: "reported_by", type: "TEXT" },
+            { name: "guest_id", type: "INT", key: "PK" },
+            { name: "citizen_id", type: "INT", key: "FK" },
+            { name: "arrival_time", type: "TIME" },
+            { name: "departure_time", type: "TIME" },
+            { name: "invite_status", type: "VARCHAR(20)" },
           ],
-          references: [{ column: "citizen_id", refTable: "citizens", refColumn: "id" }],
+          references: [{ column: "citizen_id", refTable: "calcutta_citizens", refColumn: "citizen_id" }],
+        },
+        {
+          name: "calcutta_citizens",
+          columns: [
+            { name: "citizen_id", type: "INT", key: "PK" },
+            { name: "full_name", type: "VARCHAR(100)" },
+            { name: "neighborhood", type: "VARCHAR(60)" },
+            { name: "shoe_size", type: "INT" },
+            { name: "footwear_preference", type: "VARCHAR(40)" },
+            { name: "height_cm", type: "INT" },
+            { name: "eye_color", type: "VARCHAR(20)" },
+          ],
+        },
+        {
+          name: "sweet_shop_orders",
+          columns: [
+            { name: "order_id", type: "INT", key: "PK" },
+            { name: "citizen_id", type: "INT", key: "FK" },
+            { name: "item_description", type: "VARCHAR(100)" },
+            { name: "order_date", type: "DATE" },
+            { name: "shop_neighborhood", type: "VARCHAR(60)" },
+          ],
+          references: [{ column: "citizen_id", refTable: "calcutta_citizens", refColumn: "citizen_id" }],
+        },
+        {
+          name: "calcutta_tram_logs",
+          columns: [
+            { name: "route_id", type: "INT", key: "PK" },
+            { name: "ticket_prefix", type: "VARCHAR(10)" },
+            { name: "destination", type: "VARCHAR(60)" },
+            { name: "operating_hours", type: "VARCHAR(20)" },
+          ],
+        },
+        {
+          name: "employment_history",
+          columns: [
+            { name: "record_id", type: "INT", key: "PK" },
+            { name: "citizen_id", type: "INT", key: "FK" },
+            { name: "company_name", type: "VARCHAR(100)" },
+            { name: "job_title", type: "VARCHAR(60)" },
+            { name: "start_date", type: "DATE" },
+            { name: "end_date", type: "DATE" },
+            { name: "termination_reason", type: "VARCHAR(80)" },
+          ],
+          references: [{ column: "citizen_id", refTable: "calcutta_citizens", refColumn: "citizen_id" }],
+        },
+        {
+          name: "rajbari_staff",
+          columns: [
+            { name: "staff_id", type: "INT", key: "PK" },
+            { name: "full_name", type: "VARCHAR(100)" },
+            { name: "role", type: "VARCHAR(60)" },
+            { name: "shift_start", type: "TIME" },
+            { name: "shift_end", type: "TIME" },
+          ],
         },
       ],
     },
     objectives: [
       {
         id: "1-1",
-        title: "Find the Witness",
-        description: "Query the citizens table to find Elena Vasquez's record.",
-        hint: "Try: SELECT * FROM citizens WHERE first_name = 'Elena' AND last_name = 'Vasquez'",
-        validationFn: (rows) => rows.some((r) => String(r.first_name).toLowerCase() === "elena" && String(r.last_name).toLowerCase() === "vasquez"),
-        successMessage: "Good work, detective. We've got her file.",
-        narrativeAfter: "Elena Vasquez, age 34. She lives in the Riverside district. But where is she now?",
+        title: "Phase 1: The Blackout Timeline",
+        description:
+          "Bakshi needs the exact minute of the blackout. Query police_fir_logs to find the reported_time for the incident at 'Sovabazar Rajbari'.",
+        hint: "SELECT reported_time FROM police_fir_logs WHERE location = 'Sovabazar Rajbari'",
+        validationFn: (rows) =>
+          rows.some((r) => String(r.reported_time ?? r.answer ?? "").includes("20:15")),
+        successMessage: "8:15 PM. The gem vanished in the dark.",
+        narrativeAfter:
+          "Bakshi: \"20:15. Now we have our anchor point. Anyone who left before 8:15 PM is innocent. The thief was inside when the lights died.\"",
       },
       {
         id: "1-2",
-        title: "Check Recent Sightings",
-        description: "Look at the sightings table to find where Elena was last seen.",
-        hint: "Try: SELECT * FROM sightings WHERE citizen_id = 7 ORDER BY seen_at DESC",
-        validationFn: (rows) => rows.length > 0 && rows.some((r) => String(r.location).toLowerCase().includes("warehouse")),
-        successMessage: "The old warehouse district... interesting.",
-        narrativeAfter: "Last sighting: the abandoned warehouse on 5th & Main. That's Moretti territory. This isn't a disappearance — it's a kidnapping.",
+        title: "Phase 2: Filtering the Guests",
+        description:
+          "Pull from mansion_guest_list all guests whose departure_time is AFTER '20:15:00' OR whose departure_time IS NULL. The thief is in this list.",
+        hint: "SELECT * FROM mansion_guest_list WHERE departure_time > '20:15:00' OR departure_time IS NULL",
+        validationFn: (rows) =>
+          rows.length >= 5 && rows.some((r) => r.citizen_id !== undefined),
+        successMessage: "Suspects narrowed. The thief was still in the building.",
+        narrativeAfter:
+          "Bakshi: \"Excellent. Now for the physical evidence — the muddy footprint in the corridor. Size 10. Kolhapuri style.\"",
       },
       {
         id: "1-3",
-        title: "Identify Other Witnesses Nearby",
-        description: "Find all citizens who live in the same district as Elena to identify potential helpers.",
-        hint: "Try: SELECT * FROM citizens WHERE district = 'Riverside' AND last_name != 'Vasquez'",
-        validationFn: (rows) => rows.length >= 2,
-        successMessage: "CASE CLOSED. We've got enough to move on the Moretti operation.",
-        narrativeAfter: "With the neighbor testimonies and sighting data, SWAT was dispatched to the warehouse. Elena was found safe. The Moretti trial proceeds tomorrow. Well done, detective.",
+        title: "Phase 3: The Muddy Print",
+        description:
+          "The thief left a distinctive muddy footprint. Query calcutta_citizens for all citizens with shoe_size = 10 AND footwear_preference = 'Kolhapuri'.",
+        hint: "SELECT citizen_id, full_name FROM calcutta_citizens WHERE shoe_size = 10 AND footwear_preference = 'Kolhapuri'",
+        validationFn: (rows) =>
+          rows.length >= 10 && rows.some((r) => r.full_name !== undefined || r.citizen_id !== undefined),
+        successMessage: "60 citizens with size 10 Kolhapuri chappals.",
+        narrativeAfter:
+          "Bakshi: \"Sixty men. Better. But still too many. Thankfully the thief was also careless with his snacks — he dropped a crushed Nalen Gur Sandesh.\"",
+      },
+      {
+        id: "1-4",
+        title: "Phase 4: The Sweet Tooth",
+        description:
+          "The thief dropped a Nalen Gur Sandesh. Query sweet_shop_orders using LIKE '%Nalen Gur%' for orders placed on '1946-10-04'.",
+        hint: "SELECT citizen_id FROM sweet_shop_orders WHERE item_description LIKE '%Nalen Gur%' AND order_date = '1946-10-04'",
+        validationFn: (rows) =>
+          rows.length >= 5 && rows.some((r) => r.citizen_id !== undefined),
+        successMessage: "15 buyers of Nalen Gur Sandesh that day.",
+        narrativeAfter:
+          "Bakshi: \"Fifteen people bought this particular sweet today. Now — cross-reference. Find who appears on BOTH lists.\"",
+      },
+      {
+        id: "1-5",
+        title: "Phase 5: The Intersection",
+        description:
+          "Cross-reference: find citizens who BOTH wear size 10 Kolhapuri chappals AND bought Nalen Gur on 1946-10-04. Use a subquery with IN or a JOIN.",
+        hint: "SELECT citizen_id, full_name FROM calcutta_citizens WHERE shoe_size = 10 AND footwear_preference = 'Kolhapuri' AND citizen_id IN (SELECT citizen_id FROM sweet_shop_orders WHERE item_description LIKE '%Nalen Gur%' AND order_date = '1946-10-04')",
+        validationFn: (rows) =>
+          rows.length >= 2 &&
+          rows.some((r) =>
+            ["amitava bose", "bhavani shankar", "devdas mukherjee"].includes(
+              String(r.full_name ?? "").toLowerCase()
+            )
+          ),
+        successMessage: "Three suspects: Amitava Bose, Bhavani Shankar, Devdas Mukherjee.",
+        narrativeAfter:
+          "Bakshi: \"Three men. He also dropped his tram ticket stub in his haste. The prefix is 'T-89'. Let's find where that tram goes.\"",
+      },
+      {
+        id: "1-6",
+        title: "Phase 6: The Torn Ticket",
+        description:
+          "The thief dropped a tram ticket stub with prefix 'T-89'. Query calcutta_tram_logs to find where this tram goes.",
+        hint: "SELECT destination FROM calcutta_tram_logs WHERE ticket_prefix = 'T-89'",
+        validationFn: (rows) =>
+          rows.some((r) =>
+            String(r.destination ?? r.answer ?? "").toLowerCase().includes("shyambazar")
+          ),
+        successMessage: "Tram T-89 goes to Shyambazar.",
+        narrativeAfter:
+          "Bakshi: \"Shyambazar. A busy neighborhood — perfect for hiding. Now — which of our three suspects lives there?\"",
+      },
+      {
+        id: "1-7",
+        title: "Phase 7: Pinpointing the Target",
+        description:
+          "Query calcutta_citizens. From our three suspects (citizen_id IN (1017, 1042, 1089)), find who lives in neighborhood = 'Shyambazar'.",
+        hint: "SELECT full_name, neighborhood FROM calcutta_citizens WHERE citizen_id IN (1017, 1042, 1089) AND neighborhood = 'Shyambazar'",
+        validationFn: (rows) =>
+          rows.some((r) =>
+            String(r.full_name ?? r.answer ?? "").toLowerCase().includes("bhavani")
+          ),
+        successMessage: "Bhavani Shankar. He lives in Shyambazar.",
+        narrativeAfter:
+          "Bakshi: \"Bhavani Shankar. But why steal a raw ruby? He couldn't sell it openly without getting caught — unless he could cut it himself. Check his employment history.\"",
+      },
+      {
+        id: "1-8",
+        title: "Phase 8: The Motive",
+        description:
+          "Query employment_history for citizen_id = 1042. Use ORDER BY end_date DESC LIMIT 1 to get his most recent job and termination reason.",
+        hint: "SELECT job_title, termination_reason FROM employment_history WHERE citizen_id = 1042 ORDER BY end_date DESC LIMIT 1",
+        validationFn: (rows) =>
+          rows.some(
+            (r) =>
+              String(r.termination_reason ?? r.answer ?? "").toLowerCase().includes("embezzlement") ||
+              String(r.job_title ?? "").toLowerCase().includes("gem")
+          ),
+        successMessage: "Master Gem Cutter — fired for Embezzlement. Motive confirmed.",
+        narrativeAfter:
+          "Bakshi: \"A gem cutter. He could slice the Surya Ruby into a dozen untraceable stones by dawn. But a gem cutter doesn't know the Rajbari's electrical layout. He needed someone on the inside.\"",
+      },
+      {
+        id: "1-9",
+        title: "Phase 9: The Inside Man",
+        description:
+          "Someone inside unlocked the fuse box. Query rajbari_staff for any staff member whose full_name contains 'Shankar'.",
+        hint: "SELECT full_name, role FROM rajbari_staff WHERE full_name LIKE '%Shankar%'",
+        validationFn: (rows) =>
+          rows.some((r) =>
+            String(r.full_name ?? r.answer ?? "").toLowerCase().includes("lata shankar")
+          ),
+        successMessage: "Lata Shankar — Maid. Bhavani's niece on the inside.",
+        narrativeAfter:
+          "Bakshi: \"Lata Shankar. His niece, working as a maid in the Rajbari. She unlocked the box, Raju the electrician took the blame, and Bhavani walked out with the ruby. One final query, Archivist — let's close the book.\"",
+      },
+      {
+        id: "1-10",
+        title: "Phase 10: The Arrest Warrant",
+        description:
+          "Write the final query. Pull citizen_id, full_name, and neighborhood from calcutta_citizens for Bhavani Shankar to generate the arrest warrant.",
+        hint: "SELECT citizen_id, full_name, neighborhood FROM calcutta_citizens WHERE full_name = 'Bhavani Shankar'",
+        validationFn: (rows) =>
+          rows.some(
+            (r) =>
+              String(r.full_name ?? r.answer ?? "").toLowerCase().includes("bhavani shankar") ||
+              Number(r.citizen_id) === 1042
+          ),
+        successMessage: "CASE CLOSED. Warrant issued. The Truth-Seeker wins again.",
+        narrativeAfter:
+          "The police raided the apartment in Shyambazar minutes later. Bhavani Shankar was found at his workbench, loupe in eye, the Surya Ruby clamped in a vise. Justice is served.",
       },
     ],
   },
