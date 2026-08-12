@@ -30,14 +30,17 @@ export function useGameProgress() {
   const [progress, setProgress] = useState<GameProgress>(EMPTY);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Hydrate: localStorage first (instant), then sync from MongoDB API
+  // Hydrate: localStorage first (instant), then sync from MongoDB API in background
   useEffect(() => {
     const local = loadLocalProgress();
     setProgress(local);
+    setIsLoading(false); // ← Unblock UI immediately with local data
 
+    // Background sync with MongoDB (non-blocking)
     fetch("/api/progress")
-      .then((r) => (r.ok ? r.json() : local))
-      .then((data: GameProgress) => {
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: GameProgress | null) => {
+        if (!data) return; // MongoDB unavailable — keep local data
         // Merge: take the most advanced of local vs server
         const merged: GameProgress = {
           completedCases: [...new Set([...local.completedCases, ...(data.completedCases ?? [])])],
@@ -46,11 +49,8 @@ export function useGameProgress() {
         };
         setProgress(merged);
         saveLocalProgress(merged);
-        setIsLoading(false);
       })
-      .catch(() => {
-        setIsLoading(false);
-      });
+      .catch(() => { /* MongoDB offline — local progress already loaded */ });
   }, []);
 
   const isCaseUnlocked = useCallback(

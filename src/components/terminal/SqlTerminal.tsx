@@ -83,13 +83,13 @@ function formatMysqlTable(result: QueryResult): string[] {
 
 // ── Syntax highlight tokens ──────────────────────────────────────────────────
 const SQL_KEYWORDS = new Set([
-  "SELECT","FROM","WHERE","AND","OR","NOT","IN","LIKE","JOIN","LEFT","RIGHT",
-  "INNER","OUTER","ON","GROUP","BY","ORDER","HAVING","LIMIT","OFFSET",
-  "AS","DISTINCT","COUNT","SUM","AVG","MAX","MIN","INSERT","UPDATE","DELETE",
-  "CREATE","DROP","ALTER","TABLE","VIEW","INDEX","INTO","VALUES","SET",
-  "SHOW","DESCRIBE","USE","PRAGMA","IS","NULL","BETWEEN","EXISTS","CASE",
-  "WHEN","THEN","ELSE","END","UNION","ALL","INTERSECT","EXCEPT","WITH",
-  "ROLLUP","CUBE","GROUPING","SUBMIT",
+  "SELECT", "FROM", "WHERE", "AND", "OR", "NOT", "IN", "LIKE", "JOIN", "LEFT", "RIGHT",
+  "INNER", "OUTER", "ON", "GROUP", "BY", "ORDER", "HAVING", "LIMIT", "OFFSET",
+  "AS", "DISTINCT", "COUNT", "SUM", "AVG", "MAX", "MIN", "INSERT", "UPDATE", "DELETE",
+  "CREATE", "DROP", "ALTER", "TABLE", "VIEW", "INDEX", "INTO", "VALUES", "SET",
+  "SHOW", "DESCRIBE", "USE", "PRAGMA", "IS", "NULL", "BETWEEN", "EXISTS", "CASE",
+  "WHEN", "THEN", "ELSE", "END", "UNION", "ALL", "INTERSECT", "EXCEPT", "WITH",
+  "ROLLUP", "CUBE", "GROUPING", "SUBMIT",
 ]);
 
 function highlightSql(input: string): React.ReactNode[] {
@@ -171,13 +171,13 @@ export const SqlTerminal = forwardRef<SqlTerminalRef, SqlTerminalProps>(
       if (!isReady) return;
       setLines([
         { type: "system", content: "╔══════════════════════════════════════════════════════════╗" },
-        { type: "system", content: "║   SQL NOIR Evidence Terminal  ·  Powered by SQLite 3    ║" },
+        { type: "system", content: "║   SQL NOIR Evidence Terminal  ·  Powered by SQLite 3     ║" },
         { type: "system", content: "╚══════════════════════════════════════════════════════════╝" },
         { type: "output", content: `Welcome to the SQL NOIR Monitor.  Commands end with ;` },
         { type: "output", content: `Database: ${dbName}` },
         { type: "output", content: `Type 'help;' for help.  Type 'show tables;' to list tables.` },
         { type: "output", content: `` },
-        { type: "info",   content: `Database changed to \`${dbName}\`` },
+        { type: "info", content: `Database changed to \`${dbName}\`` },
         { type: "output", content: `` },
         { type: "system", content: `  HOW TO SUBMIT AN ANSWER:` },
         { type: "output", content: `  submit(table_name)             — submit all rows from a table` },
@@ -337,8 +337,8 @@ export const SqlTerminal = forwardRef<SqlTerminalRef, SqlTerminalProps>(
             } else {
               addLines([
                 { type: "output", content: "" },
-                { type: "error",   content: `✗  INCORRECT — Your answer doesn't satisfy the objective.` },
-                { type: "error",   content: `   Read the objective carefully and refine your query.` },
+                { type: "error", content: `✗  INCORRECT — Your answer doesn't satisfy the objective.` },
+                { type: "error", content: `   Read the objective carefully and refine your query.` },
                 { type: "output", content: "" },
               ]);
             }
@@ -474,12 +474,12 @@ export const SqlTerminal = forwardRef<SqlTerminalRef, SqlTerminalProps>(
 
     const lineColor = (type: LineType) => {
       switch (type) {
-        case "input":   return "text-[hsl(140,60%,55%)]";
-        case "error":   return "text-[hsl(0,70%,60%)]";
+        case "input": return "text-[hsl(140,60%,55%)]";
+        case "error": return "text-[hsl(0,70%,60%)]";
         case "success": return "text-[hsl(140,60%,55%)] font-semibold";
-        case "system":  return "text-[hsl(38,80%,60%)]";
-        case "info":    return "text-[hsl(200,70%,65%)]";
-        default:        return "text-[hsl(220,15%,80%)]";
+        case "system": return "text-[hsl(38,80%,60%)]";
+        case "info": return "text-[hsl(200,70%,65%)]";
+        default: return "text-[hsl(220,15%,80%)]";
       }
     };
 

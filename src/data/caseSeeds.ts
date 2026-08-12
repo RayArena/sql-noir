@@ -321,7 +321,7 @@ INSERT INTO rajbari_staff VALUES
 (309,'Hiralal Saha','Electrician','09:00:00','21:00:00'),
 (310,'Mira Devi','Kitchen Helper','06:00:00','18:00:00'),
 (311,'Ramesh Koley','Dhobi','07:00:00','17:00:00'),
-(312,'Shakuntala','Lady's Maid','08:00:00','22:00:00'),
+(312,'Shakuntala','Lady''s Maid','08:00:00','22:00:00'),
 (313,'Govind Prasad','Footman','10:00:00','22:00:00'),
 (314,'Jagannath Bera','Night Watchman','20:00:00','06:00:00'),
 (315,'Sudha Kumari','Ayah','07:00:00','21:00:00');

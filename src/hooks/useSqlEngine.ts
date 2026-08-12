@@ -10,13 +10,19 @@ interface UseSqlEngineReturn {
   getTableNames: () => string[];
   describeTable: (tableName: string) => QueryResult | null;
   error: string | null;
+  reload: () => void;
 }
 
 export function useSqlEngine(caseId: number): UseSqlEngineReturn {
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadCounter, setReloadCounter] = useState(0);
   const engineRef = useRef<SqlEngine | null>(null);
+
+  const reload = useCallback(() => {
+    setReloadCounter((c) => c + 1);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -24,7 +30,7 @@ export function useSqlEngine(caseId: number): UseSqlEngineReturn {
     setIsReady(false);
     setError(null);
 
-    // Destroy previous engine if switching cases
+    // Destroy previous engine if switching cases or reloading
     if (engineRef.current) {
       engineRef.current.destroy();
       engineRef.current = null;
@@ -50,7 +56,7 @@ export function useSqlEngine(caseId: number): UseSqlEngineReturn {
     return () => {
       cancelled = true;
     };
-  }, [caseId]);
+  }, [caseId, reloadCounter]);
 
   const runQuery = useCallback((sql: string): QueryResult | null => {
     if (!engineRef.current) return null;
@@ -67,5 +73,5 @@ export function useSqlEngine(caseId: number): UseSqlEngineReturn {
     return engineRef.current.describeTable(tableName);
   }, []);
 
-  return { isReady, isLoading, runQuery, getTableNames, describeTable, error };
+  return { isReady, isLoading, runQuery, getTableNames, describeTable, error, reload };
 }
