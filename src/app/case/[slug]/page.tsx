@@ -59,7 +59,7 @@ export default function CasePage() {
 
   // sql.js engine
   const dbName = gameCase ? `case_${gameCase.slug.replace(/-/g, "_")}` : "evidence";
-  const { isReady, isLoading: dbLoading, runQuery, getTableNames, describeTable } = useSqlEngine(
+  const { isReady, isLoading: dbLoading, error: dbError, reload: reloadDb, runQuery, getTableNames, describeTable } = useSqlEngine(
     gameCase?.id ?? 0
   );
 

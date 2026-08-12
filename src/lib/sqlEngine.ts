@@ -1,13 +1,10 @@
 /**
  * sqlEngine.ts — sql.js wrapper for in-browser SQLite execution.
  *
- * Usage:
- *   const engine = await createSqlEngine(caseId);
- *   const result = engine.runQuery("SELECT * FROM police_fir_logs");
- *   const validation = engine.submit("suspects", expectedRows);
+ * Loads sql.js by injecting a <script> tag pointing to the bundled file
+ * in /public/sql-wasm.js — this avoids Turbopack WASM import issues entirely.
  */
 
-import type { SqlJsStatic, Database } from "sql.js";
 import { CASE_SEEDS } from "@/data/caseSeeds";
 
 export interface QueryResult {
@@ -25,22 +22,45 @@ export interface SqlEngine {
   destroy: () => void;
 }
 
-let SQL: SqlJsStatic | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SqlJsStatic = any;
 
-async function getSqlJs(): Promise<SqlJsStatic> {
-  if (SQL) return SQL;
-  // Dynamically import sql.js — it's a heavy wasm module
-  const initSqlJs = (await import("sql.js")).default;
-  SQL = await initSqlJs({
-    // Map any wasm file request to /public/ (both browser and non-browser variants)
-    locateFile: (file: string) => `/${file}`,
+let sqlJsPromise: Promise<SqlJsStatic> | null = null;
+
+function loadSqlJsScript(): Promise<SqlJsStatic> {
+  if (sqlJsPromise) return sqlJsPromise;
+
+  sqlJsPromise = new Promise((resolve, reject) => {
+    // If already loaded from a previous script injection
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (typeof (window as any).initSqlJs !== "undefined") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).initSqlJs({ locateFile: () => "/sql-wasm.wasm" }).then(resolve).catch(reject);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "/sql-wasm.js";
+    script.async = true;
+    script.onload = () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const initSqlJs = (window as any).initSqlJs;
+      if (!initSqlJs) {
+        reject(new Error("sql.js failed to expose initSqlJs on window"));
+        return;
+      }
+      initSqlJs({ locateFile: () => "/sql-wasm.wasm" }).then(resolve).catch(reject);
+    };
+    script.onerror = () => reject(new Error("Failed to load /sql-wasm.js"));
+    document.head.appendChild(script);
   });
-  return SQL;
+
+  return sqlJsPromise;
 }
 
 export async function createSqlEngine(caseId: number): Promise<SqlEngine> {
-  const sqlJs = await getSqlJs();
-  const db: Database = new sqlJs.Database();
+  const SQL = await loadSqlJsScript();
+  const db = new SQL.Database();
 
   // Seed the database with case-specific data
   const seed = CASE_SEEDS[caseId];
@@ -60,14 +80,13 @@ export async function createSqlEngine(caseId: number): Promise<SqlEngine> {
       const execTime = performance.now() - start;
 
       if (results.length === 0) {
-        // DML statement or empty result
         return { columns: [], rows: [], rowCount: 0, execTime };
       }
 
       const { columns, values } = results[0];
-      const rows = values.map((row) => {
+      const rows = values.map((row: (string | number | null)[]) => {
         const obj: Record<string, string | number | null> = {};
-        columns.forEach((col, i) => {
+        columns.forEach((col: string, i: number) => {
           const val = row[i];
           obj[col] = val === undefined ? null : val as string | number | null;
         });
