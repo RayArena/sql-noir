@@ -1,17 +1,14 @@
-import { sql } from "@/lib/db";
-import { getOrCreateUser } from "@/lib/getOrCreateUser";
+import { auth } from "@clerk/nextjs/server";
+import { connectToMongoDB } from "@/lib/mongodb";
+import { GameProgress } from "@/models/GameProgress";
 
-/** POST /api/progress/reset — wipe all progress for the current user */
+/** POST /api/progress/reset — delete user's entire progress document */
 export async function POST() {
-  const user = await getOrCreateUser();
-  if (!user) return new Response("Unauthorized", { status: 401 });
+  const { userId } = await auth();
+  if (!userId) return new Response("Unauthorized", { status: 401 });
 
-  try {
-    await sql`DELETE FROM game_progress WHERE user_id = ${user.id}`;
-  } catch (err) {
-    console.error("[progress/reset] error:", err);
-    return new Response("Database error", { status: 500 });
-  }
+  await connectToMongoDB();
+  await GameProgress.deleteOne({ userId });
 
-  return Response.json({ success: true });
+  return Response.json({ ok: true });
 }
