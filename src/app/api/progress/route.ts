@@ -1,23 +1,31 @@
-import { sql } from "@/lib/db";
-import { getOrCreateUser } from "@/lib/getOrCreateUser";
+import { auth } from "@clerk/nextjs/server";
+import { connectToMongoDB } from "@/lib/mongodb";
+import { GameProgress } from "@/models/GameProgress";
 
 /** GET /api/progress — fetch the current user's game progress */
 export async function GET() {
-  const user = await getOrCreateUser();
-  if (!user) return new Response("Unauthorized", { status: 401 });
+  const { userId } = await auth();
+  if (!userId) return new Response("Unauthorized", { status: 401 });
 
-  const rows = await sql`
-    SELECT case_id, objective_idx, completed
-    FROM game_progress
-    WHERE user_id = ${user.id}
-  ` as { case_id: number; objective_idx: number; completed: boolean }[];
+  await connectToMongoDB();
 
-  const completedCases: number[] =
-    rows.filter((r) => r.completed).map((r) => r.case_id);
+  const doc = await GameProgress.findOne({ userId }).lean();
 
-  const currentObjectives: Record<number, number> = Object.fromEntries(
-    rows.map((r) => [r.case_id, r.objective_idx])
-  );
+  if (!doc) {
+    return Response.json({ completedCases: [], completedQuests: [], currentObjectives: {} });
+  }
 
-  return Response.json({ completedCases, currentObjectives });
+  // Convert Map to plain object for JSON serialization
+  const currentObjectives: Record<number, number> = {};
+  if (doc.currentObjectives) {
+    for (const [k, v] of Object.entries(doc.currentObjectives)) {
+      currentObjectives[Number(k)] = v as number;
+    }
+  }
+
+  return Response.json({
+    completedCases: doc.completedCases ?? [],
+    completedQuests: doc.completedQuests ?? [],
+    currentObjectives,
+  });
 }

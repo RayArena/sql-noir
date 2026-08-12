@@ -1,41 +1,43 @@
-import { sql } from "@/lib/db";
-import { getOrCreateUser } from "@/lib/getOrCreateUser";
+import { auth } from "@clerk/nextjs/server";
+import { connectToMongoDB } from "@/lib/mongodb";
+import { GameProgress } from "@/models/GameProgress";
 
-/** POST /api/progress/advance — advance the current objective for a case */
-export async function POST(req: Request) {
-  const user = await getOrCreateUser();
-  if (!user) return new Response("Unauthorized", { status: 401 });
+/** POST /api/progress/advance — advance objective, mark quest/case complete */
+export async function POST(request: Request) {
+  const { userId } = await auth();
+  if (!userId) return new Response("Unauthorized", { status: 401 });
 
-  const { caseId, totalObjectives } = (await req.json()) as {
+  const { caseId, totalObjectives, questId } = await request.json() as {
     caseId: number;
     totalObjectives: number;
+    questId?: string;
   };
 
-  // Read current progress
-  const current = await sql`
-    SELECT objective_idx FROM game_progress
-    WHERE user_id = ${user.id} AND case_id = ${caseId}
-  ` as { objective_idx: number }[];
+  await connectToMongoDB();
 
-  const currentIdx = current[0]?.objective_idx ?? 0;
-  const nextIdx = currentIdx + 1;
-  const completed = nextIdx >= totalObjectives;
-  const now = new Date().toISOString();
-
-  try {
-    await sql`
-      INSERT INTO game_progress (user_id, case_id, objective_idx, completed, completed_at, updated_at)
-      VALUES (${user.id}, ${caseId}, ${nextIdx}, ${completed}, ${completed ? now : null}, ${now})
-      ON CONFLICT (user_id, case_id) DO UPDATE SET
-        objective_idx = ${nextIdx},
-        completed = ${completed},
-        completed_at = ${completed ? now : null},
-        updated_at = ${now}
-    `;
-  } catch (err) {
-    console.error("[progress/advance] error:", err);
-    return new Response("Database error", { status: 500 });
+  // Get or create document
+  let doc = await GameProgress.findOne({ userId });
+  if (!doc) {
+    doc = new GameProgress({ userId });
   }
 
-  return Response.json({ success: true, nextIdx, completed });
+  // Advance objective index
+  const key = String(caseId);
+  const currentIdx = (doc.currentObjectives.get(key) ?? 0);
+  const nextIdx = currentIdx + 1;
+  doc.currentObjectives.set(key, nextIdx);
+
+  // Mark case complete if all objectives done
+  if (nextIdx >= totalObjectives && !doc.completedCases.includes(caseId)) {
+    doc.completedCases.push(caseId);
+  }
+
+  // Mark quest complete if provided
+  if (questId && !doc.completedQuests.includes(questId)) {
+    doc.completedQuests.push(questId);
+  }
+
+  await doc.save();
+
+  return Response.json({ ok: true });
 }

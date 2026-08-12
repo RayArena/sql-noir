@@ -141,6 +141,63 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Dialog player text cursor blink */
+  @keyframes cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  .cursor-blink {
+    animation: cursor-blink 0.85s step-end infinite;
+  }
+
+  /* Typewriter text animation */
+  @keyframes typewriter-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .typewriter-in {
+    animation: typewriter-in 0.15s ease-out forwards;
+  }
+
+  /* Quest unlock pulse */
+  @keyframes quest-unlock {
+    0%   { box-shadow: 0 0 0 0 hsl(38 70% 50% / 0.5); }
+    70%  { box-shadow: 0 0 0 12px hsl(38 70% 50% / 0); }
+    100% { box-shadow: 0 0 0 0 hsl(38 70% 50% / 0); }
+  }
+  .quest-unlock {
+    animation: quest-unlock 0.8s ease-out;
+  }
+
+  /* Terminal scanlines */
+  .terminal-scanlines {
+    background-image: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      hsl(0 0% 0% / 0.08) 2px,
+      hsl(0 0% 0% / 0.08) 3px
+    );
+    pointer-events: none;
+  }
+
+  /* Stamp slam animation */
+  @keyframes stamp-slam {
+    0%   { transform: rotate(-12deg) scale(2); opacity: 0; }
+    60%  { transform: rotate(-12deg) scale(0.95); opacity: 1; }
+    80%  { transform: rotate(-12deg) scale(1.05); }
+    100% { transform: rotate(-12deg) scale(1); opacity: 0.85; }
+  }
+  .animate-stamp-slam {
+    animation: stamp-slam 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  }
+
+  /* Noir-ink color var for paper elements */
+  .text-noir-ink { color: hsl(var(--noir-ink)); }
+  .bg-noir-paper { background-color: hsl(var(--noir-paper)); }
+  .text-noir-green { color: hsl(var(--noir-green)); }
+  .bg-noir-green { background-color: hsl(var(--noir-green)); }
 }
 
 /* ── Hide Clerk "Secured by Clerk / Development mode" badge ── */
