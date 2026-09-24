@@ -19,11 +19,25 @@ export function Header() {
         <SignedIn>
           <nav className="flex items-center gap-5">
             <NavLink
+              href="/"
+              className="font-typewriter text-sm tracking-widest uppercase text-muted-foreground hover:text-primary transition-colors"
+              activeClassName="text-primary"
+            >
+              Home
+            </NavLink>
+            <NavLink
               href="/cases"
               className="font-typewriter text-sm tracking-widest uppercase text-muted-foreground hover:text-primary transition-colors"
               activeClassName="text-primary"
             >
               Cases
+            </NavLink>
+            <NavLink
+              href="/tutorials"
+              className="font-typewriter text-sm tracking-widest uppercase text-muted-foreground hover:text-primary transition-colors"
+              activeClassName="text-primary"
+            >
+              Tutorials
             </NavLink>
             <NavLink
               href="/profile"

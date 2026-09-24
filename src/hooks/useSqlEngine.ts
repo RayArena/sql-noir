@@ -13,7 +13,11 @@ interface UseSqlEngineReturn {
   reload: () => void;
 }
 
-export function useSqlEngine(caseId: number): UseSqlEngineReturn {
+/**
+ * Runs a sql.js database for a case (by numeric id) or for an arbitrary raw
+ * seed string (used by the tutorial practice sandbox).
+ */
+export function useSqlEngine(source: number | string): UseSqlEngineReturn {
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +41,7 @@ export function useSqlEngine(caseId: number): UseSqlEngineReturn {
     }
 
     import("@/lib/sqlEngine").then(({ createSqlEngine }) =>
-      createSqlEngine(caseId)
+      createSqlEngine(source)
     ).then((engine) => {
       if (cancelled) {
         engine.destroy();
@@ -56,7 +60,7 @@ export function useSqlEngine(caseId: number): UseSqlEngineReturn {
     return () => {
       cancelled = true;
     };
-  }, [caseId, reloadCounter]);
+  }, [source, reloadCounter]);
 
   const runQuery = useCallback((sql: string): QueryResult | null => {
     if (!engineRef.current) return null;

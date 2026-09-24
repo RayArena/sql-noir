@@ -12,7 +12,7 @@ export async function GET() {
   const doc = await GameProgress.findOne({ userId }).lean();
 
   if (!doc) {
-    return Response.json({ completedCases: [], completedQuests: [], currentObjectives: {} });
+    return Response.json({ completedCases: [], completedQuests: [], completedLessons: [], currentObjectives: {} });
   }
 
   // Convert Map to plain object for JSON serialization
@@ -26,6 +26,7 @@ export async function GET() {
   return Response.json({
     completedCases: doc.completedCases ?? [],
     completedQuests: doc.completedQuests ?? [],
+    completedLessons: doc.completedLessons ?? [],
     currentObjectives,
   });
 }

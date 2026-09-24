@@ -4,6 +4,7 @@ export interface IGameProgress extends Document {
   userId: string;
   completedCases: number[];
   completedQuests: string[];
+  completedLessons: string[];
   currentObjectives: Map<string, number>;
   updatedAt: Date;
 }
@@ -13,6 +14,7 @@ const GameProgressSchema = new Schema<IGameProgress>(
     userId: { type: String, required: true, unique: true, index: true },
     completedCases: { type: [Number], default: [] },
     completedQuests: { type: [String], default: [] },
+    completedLessons: { type: [String], default: [] },
     currentObjectives: { type: Map, of: Number, default: new Map() },
   },
   { timestamps: true }

@@ -5,10 +5,11 @@ import { useState, useCallback, useEffect } from "react";
 interface GameProgress {
   completedCases: number[];
   completedQuests: string[];
+  completedLessons: string[];
   currentObjectives: Record<number, number>;
 }
 
-const EMPTY: GameProgress = { completedCases: [], completedQuests: [], currentObjectives: {} };
+const EMPTY: GameProgress = { completedCases: [], completedQuests: [], completedLessons: [], currentObjectives: {} };
 const LS_KEY = "sql-noir-progress";
 
 function loadLocalProgress(): GameProgress {
@@ -45,6 +46,7 @@ export function useGameProgress() {
         const merged: GameProgress = {
           completedCases: [...new Set([...local.completedCases, ...(data.completedCases ?? [])])],
           completedQuests: [...new Set([...local.completedQuests, ...(data.completedQuests ?? [])])],
+          completedLessons: [...new Set([...(local.completedLessons ?? []), ...(data.completedLessons ?? [])])],
           currentObjectives: { ...local.currentObjectives, ...data.currentObjectives },
         };
         setProgress(merged);
@@ -90,6 +92,7 @@ export function useGameProgress() {
           completedQuests: questId && !prev.completedQuests.includes(questId)
             ? [...prev.completedQuests, questId]
             : prev.completedQuests,
+          completedLessons: prev.completedLessons ?? [],
           currentObjectives: { ...prev.currentObjectives, [caseId]: nextIdx },
         };
         saveLocalProgress(next);
@@ -102,6 +105,31 @@ export function useGameProgress() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ caseId, totalObjectives, questId }),
+        });
+      } catch { /* offline — localStorage already saved */ }
+    },
+    []
+  );
+
+  const isLessonCompleted = useCallback(
+    (lessonId: string) => (progress.completedLessons ?? []).includes(lessonId),
+    [progress]
+  );
+
+  const markLessonComplete = useCallback(
+    async (lessonId: string) => {
+      setProgress((prev) => {
+        const existing = prev.completedLessons ?? [];
+        if (existing.includes(lessonId)) return prev;
+        const next: GameProgress = { ...prev, completedLessons: [...existing, lessonId] };
+        saveLocalProgress(next);
+        return next;
+      });
+      try {
+        await fetch("/api/progress/lesson", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lessonId }),
         });
       } catch { /* offline — localStorage already saved */ }
     },
@@ -124,6 +152,9 @@ export function useGameProgress() {
     getCurrentObjective,
     advanceObjective,
     resetProgress,
+    isLessonCompleted,
+    markLessonComplete,
     completedQuests: progress.completedQuests,
+    completedLessons: progress.completedLessons ?? [],
   };
 }

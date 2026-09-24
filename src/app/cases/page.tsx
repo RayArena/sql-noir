@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Lock, CheckCircle, ArrowLeft, ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import { CASES } from "@/data/cases";
 import { useGameProgress } from "@/hooks/useGameProgress";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 type FlipDir = "forward" | "backward";
@@ -21,36 +21,33 @@ export default function CasesPage() {
   const router = useRouter();
   const { isCaseUnlocked, isCaseCompleted } = useGameProgress();
   const [mounted, setMounted] = useState(false);
-  // 0 = folder cover, 1..4 = case pages
+  // 0 = folder cover, 1..N = case pages
   const [pageIndex, setPageIndex] = useState(0);
   const [flipDir, setFlipDir] = useState<FlipDir>("forward");
   const [isFlipping, setIsFlipping] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => { setMounted(true); }, []);
 
   const totalPages = CASES.length + 1; // cover + one per case
 
-  const navigate = (dir: FlipDir) => {
-    if (isFlipping) return;
-    const next = dir === "forward" ? pageIndex + 1 : pageIndex - 1;
-    if (next < 0 || next >= totalPages) return;
-    setFlipDir(dir);
-    setIsFlipping(true);
-    setTimeout(() => {
+  // Change the page immediately and let AnimatePresence drive the flip; the
+  // isFlipping guard (cleared when the incoming page finishes animating) just
+  // debounces rapid clicks so pages don't stack mid-turn.
+  const goTo = useCallback(
+    (next: number, dir: FlipDir) => {
+      if (isFlipping || next < 0 || next >= totalPages || next === pageIndex) return;
+      setFlipDir(dir);
+      setIsFlipping(true);
       setPageIndex(next);
-      setIsFlipping(false);
-    }, 400);
-  };
+    },
+    [isFlipping, pageIndex, totalPages]
+  );
 
-  const jumpTo = (idx: number) => {
-    if (isFlipping || idx === pageIndex) return;
-    setFlipDir(idx > pageIndex ? "forward" : "backward");
-    setIsFlipping(true);
-    setTimeout(() => {
-      setPageIndex(idx);
-      setIsFlipping(false);
-    }, 400);
-  };
+  const navigate = (dir: FlipDir) =>
+    goTo(dir === "forward" ? pageIndex + 1 : pageIndex - 1, dir);
+
+  const jumpTo = (idx: number) => goTo(idx, idx > pageIndex ? "forward" : "backward");
 
   const caseData = pageIndex > 0 ? CASES[pageIndex - 1] : null;
   const unlocked = caseData && mounted ? isCaseUnlocked(caseData.id) : caseData?.id === 1;
@@ -121,30 +118,29 @@ export default function CasesPage() {
 
           {/* Animated page */}
           <div className="absolute inset-0 z-20" style={{ transformStyle: "preserve-3d" }}>
-            <AnimatePresence mode="sync">
+            <AnimatePresence mode="sync" initial={false}>
               <motion.div
                 key={pageIndex}
-                initial={{
-                  rotateY: flipDir === "forward" ? 90 : -90,
-                  y: 0,
-                  opacity: 0,
-                  transformOrigin: "left center",
-                }}
-                animate={{ rotateY: 0, y: 0, opacity: 1, transformOrigin: "left center" }}
-                exit={{
-                  rotateY: flipDir === "forward" ? -90 : 90,
-                  y: 0,
-                  opacity: 0,
-                  transformOrigin: "left center",
-                }}
-                transition={{ duration: 0.35, ease: [0.22, 0.61, 0.36, 1] }}
+                initial={
+                  reduceMotion
+                    ? { opacity: 0 }
+                    : { rotateY: flipDir === "forward" ? 88 : -88, opacity: 0, transformOrigin: "left center" }
+                }
+                animate={{ rotateY: 0, opacity: 1, transformOrigin: "left center" }}
+                exit={
+                  reduceMotion
+                    ? { opacity: 0 }
+                    : { rotateY: flipDir === "forward" ? -88 : 88, opacity: 0, transformOrigin: "left center" }
+                }
+                transition={{ duration: reduceMotion ? 0.15 : 0.42, ease: [0.22, 0.61, 0.36, 1] }}
+                onAnimationComplete={() => setIsFlipping(false)}
                 className="absolute inset-0 rounded-b-sm rounded-tr-sm overflow-hidden"
                 style={{
                   background: "hsl(40 25% 88%)",
                   boxShadow: "4px 4px 24px rgba(0,0,0,0.55), inset 0 0 60px hsl(30 30% 30% / 0.08)",
                   transformStyle: "preserve-3d",
                   backfaceVisibility: "hidden",
-                  willChange: "transform",
+                  willChange: "transform, opacity",
                 }}
               >
                 {/* Red margin line */}
@@ -295,6 +291,53 @@ function CaseFilePage({
   onOpen: () => void;
 }) {
   const diff = difficultyLabel[caseData.difficulty] ?? { text: caseData.difficulty.toUpperCase(), color: "text-noir-ink/60 border-noir-ink/30" };
+
+  if (caseData.status === "in-development") {
+    return (
+      <div className="flex flex-col gap-5 min-h-full pb-10">
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="font-mono-case text-noir-ink/40 text-[10px] tracking-widest">
+              CASE #{String(caseData.id).padStart(3, "0")}
+            </p>
+            <h2 className="font-typewriter text-3xl text-noir-ink/50 mt-1 leading-tight">
+              {caseData.title}
+            </h2>
+            <p className="font-mono-case text-xs text-noir-ink/40 italic mt-0.5">{caseData.subtitle}</p>
+          </div>
+          <div className={`font-typewriter text-[10px] border px-2 py-0.5 tracking-widest shrink-0 mt-1 opacity-50 ${diff.color}`}>
+            {diff.text}
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-noir-ink/12" />
+
+        {/* Synopsis */}
+        <div>
+          <p className="font-typewriter text-[9px] text-noir-ink/40 tracking-[0.3em] uppercase mb-1.5">Synopsis</p>
+          <p className="font-mono-case text-noir-ink/70 text-xs leading-relaxed">{caseData.teaser}</p>
+        </div>
+
+        {/* In-development block */}
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 py-8">
+          <FileText className="w-11 h-11 text-noir-ink/20" />
+          <div className="stamp-effect font-typewriter text-xl px-6 py-2">In Development</div>
+          <p className="font-mono-case text-noir-ink/45 text-xs text-center leading-relaxed mt-2 max-w-xs">
+            This file is being assembled. Teaches <span className="text-noir-ink/70">{caseData.concepts.join(" and ")}</span>. Check back in a future update.
+          </p>
+        </div>
+
+        {/* Redacted lines */}
+        <div className="space-y-2 opacity-15 select-none pointer-events-none mt-auto">
+          {[80, 95, 65, 85, 70].map((w, i) => (
+            <div key={i} className="h-3 rounded bg-noir-ink/30" style={{ width: `${w}%` }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (!unlocked) {
     return (

@@ -42,7 +42,6 @@ export default function CasePage() {
     advanceObjective,
     isCaseUnlocked,
     isCaseCompleted,
-    isQuestCompleted,
     completedQuests,
     isLoading: progressLoading,
   } = useGameProgress();
@@ -59,7 +58,7 @@ export default function CasePage() {
 
   // sql.js engine
   const dbName = gameCase ? `case_${gameCase.slug.replace(/-/g, "_")}` : "evidence";
-  const { isReady, isLoading: dbLoading, error: dbError, reload: reloadDb, runQuery, getTableNames, describeTable } = useSqlEngine(
+  const { isReady, isLoading: dbLoading, runQuery, getTableNames, describeTable } = useSqlEngine(
     gameCase?.id ?? 0
   );
 
@@ -67,7 +66,7 @@ export default function CasePage() {
 
   useEffect(() => {
     if (!mounted || progressLoading) return;
-    if (!gameCase || !isCaseUnlocked(gameCase.id)) {
+    if (!gameCase || gameCase.status === "in-development" || !isCaseUnlocked(gameCase.id)) {
       router.replace("/cases");
     }
   }, [mounted, progressLoading, gameCase, isCaseUnlocked, router]);
@@ -117,7 +116,7 @@ export default function CasePage() {
   }, [currentQuest, mounted, arcScript, phase, currentObjective]);
 
   const handleObjectiveValidated = useCallback(
-    async (rows: Record<string, string | number | null>[]) => {
+    async () => {
       if (!gameCase || !currentObjective) return;
       const obj = currentObjective;
 
@@ -212,7 +211,7 @@ export default function CasePage() {
   );
 
   if (!mounted) return null;
-  if (!gameCase || !isCaseUnlocked(gameCase.id)) return null;
+  if (!gameCase || gameCase.status === "in-development" || !isCaseUnlocked(gameCase.id)) return null;
 
   const difficultyColor: Record<string, string> = {
     "Rookie":           "border-emerald-600/40 text-emerald-400",
