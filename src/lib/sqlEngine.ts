@@ -58,12 +58,13 @@ function loadSqlJsScript(): Promise<SqlJsStatic> {
   return sqlJsPromise;
 }
 
-export async function createSqlEngine(caseId: number): Promise<SqlEngine> {
+export async function createSqlEngine(source: number | string): Promise<SqlEngine> {
   const SQL = await loadSqlJsScript();
   const db = new SQL.Database();
 
-  // Seed the database with case-specific data
-  const seed = CASE_SEEDS[caseId];
+  // Seed the database. A number selects a case seed; a string is raw DDL/DML
+  // (used by the tutorial practice sandbox, which supplies its own schema).
+  const seed = typeof source === "string" ? source : CASE_SEEDS[source];
   if (seed) {
     db.run(seed);
   }
