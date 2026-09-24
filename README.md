@@ -1,4 +1,4 @@
-# SQL NOIR — The Black Ledger Conspiracy
+# SQL NOIR 
 
 > A noir detective game that teaches SQL. You play a detective in the fictional
 > Indian metropolis of **Devgarh**, cracking an eight-level conspiracy by writing
